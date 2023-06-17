@@ -1,0 +1,16 @@
+[package]
+name = "resback"
+version = "0.1.0"
+edition = "2021"
+authors = ["Qoo <akck0918@gmail.com>"]
+description = "Respec.team's backend"
+repository = "https://github.com/choijunhyuck/resback"
+# We do not want to publish this
+publish = false
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+axum = "0.6.18"
+dotenv = "0.15.0"
+tokio = { version = "1.28.2", features = ["full"] }
