@@ -25,3 +25,6 @@ cargo run
 
 ## Author
 [Qoo](https://github.com/qoor) (akck0918@gmail.com)
+
+## Copyright
+Copyright 2023 [The resback authors](AUTHORS)

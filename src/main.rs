@@ -1,3 +1,5 @@
+// Copyright 2023 The resback authors
+
 mod env;
 mod handler;
 

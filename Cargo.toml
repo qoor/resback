@@ -1,3 +1,5 @@
+# Copyright 2023 The resback authors
+
 [package]
 name = "resback"
 version = "0.1.0"
