@@ -374,6 +374,7 @@ dependencies = [
  "axum",
  "dotenv",
  "tokio",
+ "tower",
 ]
 
 [[package]]
