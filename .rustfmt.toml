@@ -1,4 +1,4 @@
-# This file defines the Rust style for automatic reformationg.
+# This file defines the Rust style for automatic reformatting.
 # See also https://rust-lang.github.io/rustfmt
 
 # Version of the formatting rules to use.
