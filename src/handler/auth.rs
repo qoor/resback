@@ -5,8 +5,8 @@ use axum::{
     response::{IntoResponse, Redirect},
 };
 use oauth2::{
-    basic::BasicClient, reqwest::async_http_client, AuthorizationCode, CsrfToken, Scope,
-    TokenResponse,
+    basic::BasicClient, reqwest::async_http_client, AuthorizationCode, CsrfToken, ResponseType,
+    Scope, TokenResponse,
 };
 use serde::Deserialize;
 
@@ -30,11 +30,24 @@ pub async fn auth_google_handler(State(data): State<Arc<AppState>>) -> impl Into
     Redirect::to(auth_url.as_ref())
 }
 
+pub async fn auth_kakao_handler(State(data): State<Arc<AppState>>) -> impl IntoResponse {
+    let (auth_url, _csrf_token) = data.kakao_oauth.authorize_url(CsrfToken::new_random).url();
+
+    Redirect::to(auth_url.as_ref())
+}
+
 pub async fn auth_google_authorized_handler(
     Query(query): Query<AuthRequest>,
     State(data): State<Arc<AppState>>,
 ) -> String {
     get_user_data(&data.google_oauth, &data.config.google_oauth.user_data_uri, &query.code).await
+}
+
+pub async fn auth_kakao_authorized_handler(
+    Query(query): Query<AuthRequest>,
+    State(data): State<Arc<AppState>>,
+) -> String {
+    get_user_data(&data.kakao_oauth, &data.config.kakao_oauth.user_data_uri, &query.code).await
 }
 
 async fn get_user_data(

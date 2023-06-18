@@ -16,6 +16,7 @@ pub struct AppState {
     database: sqlx::Pool<MySql>,
     config: Config,
     google_oauth: oauth2::basic::BasicClient,
+    kakao_oauth: oauth2::basic::BasicClient,
 }
 
 #[tokio::main]
@@ -40,17 +41,20 @@ async fn main() {
         }
     };
 
-    let redirect_url = format!("http://localhost:{}/auth/google/authorized", config.port);
-
     let app = Router::new()
         .route("/", get(handler::root_handler))
+        // For Google OAuth 2.0
         .route("/auth/google", get(handler::auth::auth_google_handler))
         .route("/auth/google/authorized", get(handler::auth::auth_google_authorized_handler))
+        // For Kakao OAuth 2.0
+        .route("/auth/kakao", get(handler::auth::auth_kakao_handler))
+        .route("/auth/kakao/authorized", get(handler::auth::auth_kakao_authorized_handler))
         // Sharing application state
         .with_state(Arc::new(AppState {
             database: pool.clone(),
             config: config.clone(),
             google_oauth: config.google_oauth.to_client(),
+            kakao_oauth: config.kakao_oauth.to_client(),
         }));
 
     print_server_started(&config.address);

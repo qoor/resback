@@ -4,6 +4,7 @@ use crate::get_env_or_panic;
 
 #[derive(Debug, Clone)]
 pub struct OAuthConfig {
+    env_prefix: String,
     client_id: String,
     auth_uri: String,
     token_uri: String,
@@ -22,6 +23,7 @@ impl OAuthConfig {
         let user_data_uri_env = format!("{}_USER_DATA_URI", env_prefix);
 
         Self {
+            env_prefix: env_prefix.to_string(),
             client_id: get_env_or_panic(&client_id_env).to_string(),
             auth_uri: get_env_or_panic(&auth_uri_env).to_string(),
             token_uri: get_env_or_panic(&token_uri_env).to_string(),
@@ -32,13 +34,20 @@ impl OAuthConfig {
     }
 
     pub fn to_client(self: &Self) -> BasicClient {
-        BasicClient::new(
+        let client = BasicClient::new(
             ClientId::new(self.client_id.clone()),
             Some(ClientSecret::new(self.client_secret.clone())),
             AuthUrl::new(self.auth_uri.clone()).unwrap(),
             Some(TokenUrl::new(self.token_uri.clone()).unwrap()),
         )
-        .set_redirect_uri(RedirectUrl::new(self.redirect_uri.clone()).unwrap())
+        .set_redirect_uri(RedirectUrl::new(self.redirect_uri.clone()).unwrap());
+        // Kakao needs the `client_secret` key everytime.
+        // It does not matter if you're setting this and trying to use Google OAuth 2.0.
+        if self.env_prefix == "KAKAO" {
+            client.set_auth_type(oauth2::AuthType::RequestBody)
+        } else {
+            client
+        }
     }
 }
 
