@@ -1,6 +1,8 @@
+// Copyright 2023 The resback authors
+
 use oauth2::{basic::BasicClient, AuthUrl, ClientId, ClientSecret, RedirectUrl, TokenUrl};
 
-use crate::get_env_or_panic;
+use crate::{get_env_or_panic, token_response::NonStandardClient};
 
 #[derive(Debug, Clone)]
 pub struct OAuthConfig {
@@ -43,11 +45,21 @@ impl OAuthConfig {
         .set_redirect_uri(RedirectUrl::new(self.redirect_uri.clone()).unwrap());
         // Kakao needs the `client_secret` key everytime.
         // It does not matter if you're setting this and trying to use Google OAuth 2.0.
-        if self.env_prefix == "KAKAO" {
+        if self.env_prefix == "KAKAO" || self.env_prefix == "NAVER" {
             client.set_auth_type(oauth2::AuthType::RequestBody)
         } else {
             client
         }
+    }
+
+    pub fn to_non_standard_client(self: &Self) -> NonStandardClient {
+        NonStandardClient::new(
+            ClientId::new(self.client_id.clone()),
+            Some(ClientSecret::new(self.client_secret.clone())),
+            AuthUrl::new(self.auth_uri.clone()).unwrap(),
+            Some(TokenUrl::new(self.token_uri.clone()).unwrap()),
+        )
+        .set_redirect_uri(RedirectUrl::new(self.redirect_uri.clone()).unwrap())
     }
 }
 

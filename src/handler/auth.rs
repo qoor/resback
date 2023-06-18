@@ -1,3 +1,5 @@
+// Copyright 2023 The resback authors
+
 use std::sync::Arc;
 
 use axum::{
@@ -5,8 +7,8 @@ use axum::{
     response::{IntoResponse, Redirect},
 };
 use oauth2::{
-    basic::BasicClient, reqwest::async_http_client, AuthorizationCode, CsrfToken, ResponseType,
-    Scope, TokenResponse,
+    reqwest::async_http_client, AuthorizationCode, CsrfToken, ErrorResponse, RevocableToken, Scope,
+    TokenIntrospectionResponse, TokenResponse, TokenType,
 };
 use serde::Deserialize;
 
@@ -36,6 +38,12 @@ pub async fn auth_kakao_handler(State(data): State<Arc<AppState>>) -> impl IntoR
     Redirect::to(auth_url.as_ref())
 }
 
+pub async fn auth_naver_handler(State(data): State<Arc<AppState>>) -> impl IntoResponse {
+    let (auth_url, _csrf_token) = data.naver_oauth.authorize_url(CsrfToken::new_random).url();
+
+    Redirect::to(auth_url.as_ref())
+}
+
 pub async fn auth_google_authorized_handler(
     Query(query): Query<AuthRequest>,
     State(data): State<Arc<AppState>>,
@@ -50,11 +58,27 @@ pub async fn auth_kakao_authorized_handler(
     get_user_data(&data.kakao_oauth, &data.config.kakao_oauth.user_data_uri, &query.code).await
 }
 
-async fn get_user_data(
-    oauth_client: &BasicClient,
+pub async fn auth_naver_authorized_handler(
+    Query(query): Query<AuthRequest>,
+    State(data): State<Arc<AppState>>,
+) -> String {
+    get_user_data(&data.naver_oauth, &data.config.naver_oauth.user_data_uri, &query.code).await
+}
+
+// TODO: Check if the lifetime is defined correctly.
+async fn get_user_data<TE, TR, TT, TIR, RT, TRE>(
+    oauth_client: &oauth2::Client<TE, TR, TT, TIR, RT, TRE>,
     user_data_url: &str,
     authorization_code: &str,
-) -> String {
+) -> String
+where
+    TE: ErrorResponse + 'static,
+    TR: TokenResponse<TT>,
+    TT: TokenType,
+    TIR: TokenIntrospectionResponse<TT>,
+    RT: RevocableToken,
+    TRE: ErrorResponse + 'static,
+{
     // Get an authorization token
     let token = oauth_client
         .exchange_code(AuthorizationCode::new(authorization_code.to_string()))

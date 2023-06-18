@@ -3,6 +3,7 @@
 mod config;
 mod env;
 mod handler;
+mod token_response;
 
 use std::sync::Arc;
 
@@ -11,12 +12,18 @@ use config::Config;
 use dotenv::dotenv;
 use env::get_env_or_panic;
 use sqlx::{mysql::MySqlPoolOptions, MySql};
+use token_response::NonStandardClient;
 
 pub struct AppState {
     database: sqlx::Pool<MySql>,
     config: Config,
     google_oauth: oauth2::basic::BasicClient,
     kakao_oauth: oauth2::basic::BasicClient,
+    /// Naver OAuth 2.0 returns token response in a non-standard way.
+    /// If you run OAuth client as `BasicClient`, we will get a parsing error.
+    /// Bugs:
+    /// * https://github.com/ramosbugs/oauth2-rs/issues/191
+    naver_oauth: NonStandardClient,
 }
 
 #[tokio::main]
@@ -49,12 +56,16 @@ async fn main() {
         // For Kakao OAuth 2.0
         .route("/auth/kakao", get(handler::auth::auth_kakao_handler))
         .route("/auth/kakao/authorized", get(handler::auth::auth_kakao_authorized_handler))
+        // For Naver OAuth 2.0
+        .route("/auth/naver", get(handler::auth::auth_naver_handler))
+        .route("/auth/naver/authorized", get(handler::auth::auth_naver_authorized_handler))
         // Sharing application state
         .with_state(Arc::new(AppState {
             database: pool.clone(),
             config: config.clone(),
             google_oauth: config.google_oauth.to_client(),
             kakao_oauth: config.kakao_oauth.to_client(),
+            naver_oauth: config.naver_oauth.to_non_standard_client(),
         }));
 
     print_server_started(&config.address);
