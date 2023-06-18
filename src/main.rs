@@ -3,7 +3,6 @@
 mod config;
 mod env;
 mod handler;
-mod jwt;
 
 use std::sync::Arc;
 
@@ -16,6 +15,7 @@ use sqlx::{mysql::MySqlPoolOptions, MySql};
 pub struct AppState {
     database: sqlx::Pool<MySql>,
     config: Config,
+    google_oauth: oauth2::basic::BasicClient,
 }
 
 #[tokio::main]
@@ -40,14 +40,21 @@ async fn main() {
         }
     };
 
+    let redirect_url = format!("http://localhost:{}/auth/google/authorized", config.port);
+
     let app = Router::new()
         .route("/", get(handler::root_handler))
+        .route("/auth/google", get(handler::auth::auth_google_handler))
+        .route("/auth/google/authorized", get(handler::auth::auth_google_authorized_handler))
         // Sharing application state
-        .with_state(Arc::new(AppState { database: pool.clone(), config }));
+        .with_state(Arc::new(AppState {
+            database: pool.clone(),
+            config: config.clone(),
+            google_oauth: config.google_oauth.to_client(),
+        }));
 
-    let address = format!("0.0.0.0:{}", get_env_or_panic("PORT"));
-    print_server_started(&address);
-    Server::bind(&address.parse().unwrap()).serve(app.into_make_service()).await.unwrap();
+    print_server_started(&config.address);
+    Server::bind(&config.address.parse().unwrap()).serve(app.into_make_service()).await.unwrap();
 }
 
 pub fn about() -> String {
