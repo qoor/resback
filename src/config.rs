@@ -45,21 +45,24 @@ impl OAuthConfig {
         .set_redirect_uri(RedirectUrl::new(self.redirect_uri.clone()).unwrap());
         // Kakao needs the `client_secret` key everytime.
         // It does not matter if you're setting this and trying to use Google OAuth 2.0.
-        if self.env_prefix == "KAKAO" || self.env_prefix == "NAVER" {
-            client.set_auth_type(oauth2::AuthType::RequestBody)
-        } else {
-            client
+        match self.env_prefix.as_str() {
+            "KAKAO" => client.set_auth_type(oauth2::AuthType::RequestBody),
+            "NAVER" => panic!("Naver OAuth 2.0 client must be a `NonStandardClient`"),
+            _ => client,
         }
     }
 
     pub fn to_non_standard_client(self: &Self) -> NonStandardClient {
-        NonStandardClient::new(
-            ClientId::new(self.client_id.clone()),
-            Some(ClientSecret::new(self.client_secret.clone())),
-            AuthUrl::new(self.auth_uri.clone()).unwrap(),
-            Some(TokenUrl::new(self.token_uri.clone()).unwrap()),
-        )
-        .set_redirect_uri(RedirectUrl::new(self.redirect_uri.clone()).unwrap())
+        match self.env_prefix.as_str() {
+            "NAVER" => NonStandardClient::new(
+                ClientId::new(self.client_id.clone()),
+                Some(ClientSecret::new(self.client_secret.clone())),
+                AuthUrl::new(self.auth_uri.clone()).unwrap(),
+                Some(TokenUrl::new(self.token_uri.clone()).unwrap()),
+            )
+            .set_redirect_uri(RedirectUrl::new(self.redirect_uri.clone()).unwrap()),
+            _ => panic!("OAuth 2.0 client other than Naver must be a `BasicClient`"),
+        }
     }
 }
 
