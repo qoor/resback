@@ -1,4 +1,4 @@
-// Copyright 2023 The resback authors
+// Copyright 2023. The resback authors all rights reserved.
 
 use oauth2::{basic::BasicClient, AuthUrl, ClientId, ClientSecret, RedirectUrl, TokenUrl};
 

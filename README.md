@@ -27,4 +27,4 @@ cargo run
 [Qoo](https://github.com/qoor) (akck0918@gmail.com)
 
 ## Copyright
-Copyright 2023 [The resback authors](AUTHORS)
+Copyright 2023. [The resback authors](AUTHORS) all rights reserved.
