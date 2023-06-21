@@ -3,6 +3,7 @@
 mod config;
 mod env;
 mod handler;
+mod nickname;
 mod token_response;
 
 use std::sync::Arc;
