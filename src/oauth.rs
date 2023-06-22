@@ -1,16 +1,113 @@
 // Copyright 2023. The resback authors all rights reserved.
 
-use std::time::Duration;
+use std::{str::FromStr, time::Duration};
 
 use oauth2::{
     basic::{
-        BasicErrorResponse, BasicRevocationErrorResponse, BasicTokenIntrospectionResponse,
-        BasicTokenType,
+        BasicClient, BasicErrorResponse, BasicRevocationErrorResponse,
+        BasicTokenIntrospectionResponse, BasicTokenType,
     },
-    helpers, AccessToken, Client, EmptyExtraTokenFields, ExtraTokenFields, RefreshToken, Scope,
-    StandardRevocableToken, StandardTokenResponse, TokenResponse, TokenType,
+    helpers, AccessToken, AuthUrl, Client, ClientId, ClientSecret, EmptyExtraTokenFields,
+    ExtraTokenFields, RedirectUrl, RefreshToken, Scope, StandardRevocableToken,
+    StandardTokenResponse, TokenResponse, TokenType, TokenUrl,
 };
 use serde::{Deserialize, Serialize};
+
+use crate::env::get_env_or_panic;
+
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type)]
+pub enum OAuthProvider {
+    Google,
+    Kakao,
+    Naver,
+}
+
+impl FromStr for OAuthProvider {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "google" => Ok(OAuthProvider::Google),
+            "kakao" => Ok(OAuthProvider::Kakao),
+            "naver" => Ok(OAuthProvider::Naver),
+            _ => Err(String::from("Invalid OAuthProvider string")),
+        }
+    }
+}
+
+impl std::fmt::Display for OAuthProvider {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct OAuthConfig {
+    provider: OAuthProvider,
+    client_id: String,
+    auth_uri: String,
+    token_uri: String,
+    client_secret: String,
+    redirect_uri: String,
+    pub user_data_uri: String,
+}
+
+impl OAuthConfig {
+    pub fn init(provider: OAuthProvider) -> Self {
+        let env_prefix = provider.to_string().to_uppercase();
+        let client_id_env = format!("{}_CLIENT_ID", env_prefix);
+        let auth_uri_env = format!("{}_AUTH_URI", env_prefix);
+        let token_uri_env = format!("{}_TOKEN_URI", env_prefix);
+        let client_secret_env = format!("{}_CLIENT_SECRET", env_prefix);
+        let redirect_uri_env = format!("{}_REDIRECT_URI", env_prefix);
+        let user_data_uri_env = format!("{}_USER_DATA_URI", env_prefix);
+
+        Self {
+            provider,
+            client_id: get_env_or_panic(&client_id_env).to_string(),
+            auth_uri: get_env_or_panic(&auth_uri_env).to_string(),
+            token_uri: get_env_or_panic(&token_uri_env).to_string(),
+            client_secret: get_env_or_panic(&client_secret_env).to_string(),
+            redirect_uri: get_env_or_panic(&redirect_uri_env).to_string(),
+            user_data_uri: get_env_or_panic(&user_data_uri_env).to_string(),
+        }
+    }
+
+    /// Returns a OAuth 2.0 client for a provider that conforms to the OAuth 2.0
+    /// standard.
+    pub fn to_client(self: &Self) -> BasicClient {
+        let client = BasicClient::new(
+            ClientId::new(self.client_id.clone()),
+            Some(ClientSecret::new(self.client_secret.clone())),
+            AuthUrl::new(self.auth_uri.clone()).unwrap(),
+            Some(TokenUrl::new(self.token_uri.clone()).unwrap()),
+        )
+        .set_redirect_uri(RedirectUrl::new(self.redirect_uri.clone()).unwrap());
+        // For Kakao provider, the `client_secret` key must be present in the request
+        // body.
+        match self.provider {
+            OAuthProvider::Kakao => client.set_auth_type(oauth2::AuthType::RequestBody),
+            OAuthProvider::Naver => panic!("Naver OAuth 2.0 client must be a `NonStandardClient`"),
+            _ => client,
+        }
+    }
+
+    /// Returns a OAuth 2.0 client for an non-standard OAuth 2.0 provider. For
+    /// more details, see [`NonStandardTokenresponse`].
+    pub fn to_non_standard_client(self: &Self) -> NonStandardClient {
+        match self.provider {
+            OAuthProvider::Naver => NonStandardClient::new(
+                ClientId::new(self.client_id.clone()),
+                Some(ClientSecret::new(self.client_secret.clone())),
+                AuthUrl::new(self.auth_uri.clone()).unwrap(),
+                Some(TokenUrl::new(self.token_uri.clone()).unwrap()),
+            )
+            .set_redirect_uri(RedirectUrl::new(self.redirect_uri.clone()).unwrap()),
+
+            _ => panic!("OAuth 2.0 client other than Naver must be a `BasicClient`"),
+        }
+    }
+}
 
 ///
 /// Custom Token Response type to replace the StandardTokenResponse provided by
