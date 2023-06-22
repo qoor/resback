@@ -10,7 +10,8 @@ use oauth2::{
     reqwest::async_http_client, AuthorizationCode, CsrfToken, ErrorResponse, RevocableToken, Scope,
     TokenIntrospectionResponse, TokenResponse, TokenType,
 };
-use serde::Deserialize;
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use sqlx::types::chrono::{DateTime, Utc};
 
 use crate::AppState;
 
@@ -19,6 +20,46 @@ use crate::AppState;
 pub struct AuthRequest {
     code: String,
     state: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct GoogleUser {
+    id: String,
+    email: String,
+    verified_email: bool,
+    name: String,
+    given_name: String,
+    family_name: String,
+    picture: String,
+    locale: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct KakaoUser {
+    id: u64,
+    connected_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct NaverUserResponse {
+    #[serde(rename = "resultcode")]
+    result_code: String,
+    message: String,
+    response: NaverUser,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct NaverUser {
+    id: String,
+    // nickname: String,
+    // name: String,
+    // email: String,
+    // gender: String,
+    // age: String,
+    // birthday: String,
+    // profile_image: String,
+    // birthyear: String,
+    // mobile: String,
 }
 
 pub async fn auth_google_handler(State(data): State<Arc<AppState>>) -> impl IntoResponse {
@@ -48,30 +89,37 @@ pub async fn auth_google_authorized_handler(
     Query(query): Query<AuthRequest>,
     State(data): State<Arc<AppState>>,
 ) -> String {
-    get_user_data(&data.google_oauth, &data.config.google_oauth.user_data_uri, &query.code).await
+    let user_data: GoogleUser =
+        get_user_data(&data.google_oauth, &data.config.google_oauth.user_data_uri, &query.code)
+            .await;
+    serde_json::to_string(&user_data).unwrap()
 }
 
 pub async fn auth_kakao_authorized_handler(
     Query(query): Query<AuthRequest>,
     State(data): State<Arc<AppState>>,
 ) -> String {
-    get_user_data(&data.kakao_oauth, &data.config.kakao_oauth.user_data_uri, &query.code).await
+    let user_data: KakaoUser =
+        get_user_data(&data.kakao_oauth, &data.config.kakao_oauth.user_data_uri, &query.code).await;
+    serde_json::to_string(&user_data).unwrap()
 }
 
 pub async fn auth_naver_authorized_handler(
     Query(query): Query<AuthRequest>,
     State(data): State<Arc<AppState>>,
 ) -> String {
-    get_user_data(&data.naver_oauth, &data.config.naver_oauth.user_data_uri, &query.code).await
+    let user_data: NaverUserResponse =
+        get_user_data(&data.naver_oauth, &data.config.naver_oauth.user_data_uri, &query.code).await;
+    serde_json::to_string(&user_data).unwrap()
 }
 
-// TODO: Check if the lifetime is defined correctly.
-async fn get_user_data<TE, TR, TT, TIR, RT, TRE>(
+async fn get_user_data<U, TE, TR, TT, TIR, RT, TRE>(
     oauth_client: &oauth2::Client<TE, TR, TT, TIR, RT, TRE>,
     user_data_url: &str,
     authorization_code: &str,
-) -> String
+) -> U
 where
+    U: DeserializeOwned,
     TE: ErrorResponse + 'static,
     TR: TokenResponse<TT>,
     TT: TokenType,
@@ -94,7 +142,7 @@ where
         .send()
         .await
         .unwrap()
-        .text()
+        .json::<U>()
         .await
         .unwrap();
 
