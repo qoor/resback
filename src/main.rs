@@ -4,7 +4,7 @@ mod config;
 mod env;
 mod handler;
 mod nickname;
-mod token_response;
+mod oauth;
 
 use std::sync::Arc;
 
@@ -12,8 +12,8 @@ use axum::{routing::get, Router, Server};
 use config::Config;
 use dotenv::dotenv;
 use env::get_env_or_panic;
+use oauth::NonStandardClient;
 use sqlx::{mysql::MySqlPoolOptions, MySql};
-use token_response::NonStandardClient;
 
 pub struct AppState {
     database: sqlx::Pool<MySql>,

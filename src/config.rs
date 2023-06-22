@@ -2,7 +2,7 @@
 
 use oauth2::{basic::BasicClient, AuthUrl, ClientId, ClientSecret, RedirectUrl, TokenUrl};
 
-use crate::{get_env_or_panic, token_response::NonStandardClient};
+use crate::{get_env_or_panic, oauth::NonStandardClient};
 
 #[derive(Debug, Clone)]
 pub struct OAuthConfig {
