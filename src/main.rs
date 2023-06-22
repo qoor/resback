@@ -5,6 +5,7 @@ mod env;
 mod handler;
 mod nickname;
 mod oauth;
+mod user;
 
 use std::sync::Arc;
 
