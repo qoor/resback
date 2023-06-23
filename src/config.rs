@@ -19,6 +19,9 @@ pub struct Config {
 
     pub private_key: RSAKey,
     pub public_key: RSAKey,
+
+    pub access_token_max_age: i64,
+    pub refresh_token_max_age: i64,
 }
 
 #[derive(Debug, Clone)]
@@ -68,6 +71,11 @@ impl Config {
                     .to_path_buf(),
             )
             .expect("Cannot open the public key file"),
+
+            access_token_max_age: get_env_or_panic("ACCESS_TOKEN_MAX_AGE").parse::<i64>().unwrap(),
+            refresh_token_max_age: get_env_or_panic("REFRESH_TOKEN_MAX_AGE")
+                .parse::<i64>()
+                .unwrap(),
         }
     }
 }
