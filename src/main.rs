@@ -3,6 +3,7 @@
 mod config;
 mod env;
 mod handler;
+mod jwt;
 mod nickname;
 mod oauth;
 mod user;
@@ -12,9 +13,10 @@ use std::sync::Arc;
 use axum::{routing::get, Router, Server};
 use config::Config;
 use dotenv::dotenv;
-use env::get_env_or_panic;
 use oauth::NonStandardClient;
 use sqlx::{mysql::MySqlPoolOptions, MySql};
+
+use crate::jwt::generate_jwt_token;
 
 pub struct AppState {
     database: sqlx::Pool<MySql>,

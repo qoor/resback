@@ -14,7 +14,9 @@ publish = false
 
 [dependencies]
 axum = "0.6.18"
+chrono = { version = "0.4.26", features = ["serde"] }
 dotenv = "0.15.0"
+jsonwebtoken = { version = "8.3.0", features = ["use_pem"] }
 names = { version = "0.14.0", default-features = false }
 oauth2 = "4.4.1"
 rand = "0.8.5"
