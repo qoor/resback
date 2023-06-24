@@ -1,6 +1,6 @@
 use crate::oauth::OAuthProvider;
 
-mod account;
+pub mod account;
 
 #[derive(Debug)]
 pub struct OAuthUserData {

@@ -89,9 +89,12 @@ pub async fn auth_google_authorized_handler(
     Query(query): Query<AuthRequest>,
     State(data): State<Arc<AppState>>,
 ) -> String {
-    let user_data: GoogleUser =
-        get_user_data(&data.google_oauth, &data.config.google_oauth.user_data_uri, &query.code)
-            .await;
+    let user_data: GoogleUser = get_oauth_user_data(
+        &data.google_oauth,
+        &data.config.google_oauth.user_data_uri,
+        &query.code,
+    )
+    .await;
     serde_json::to_string(&user_data).unwrap()
 }
 
@@ -100,7 +103,8 @@ pub async fn auth_kakao_authorized_handler(
     State(data): State<Arc<AppState>>,
 ) -> String {
     let user_data: KakaoUser =
-        get_user_data(&data.kakao_oauth, &data.config.kakao_oauth.user_data_uri, &query.code).await;
+        get_oauth_user_data(&data.kakao_oauth, &data.config.kakao_oauth.user_data_uri, &query.code)
+            .await;
     serde_json::to_string(&user_data).unwrap()
 }
 
@@ -109,11 +113,12 @@ pub async fn auth_naver_authorized_handler(
     State(data): State<Arc<AppState>>,
 ) -> String {
     let user_data: NaverUserResponse =
-        get_user_data(&data.naver_oauth, &data.config.naver_oauth.user_data_uri, &query.code).await;
+        get_oauth_user_data(&data.naver_oauth, &data.config.naver_oauth.user_data_uri, &query.code)
+            .await;
     serde_json::to_string(&user_data).unwrap()
 }
 
-async fn get_user_data<U, TE, TR, TT, TIR, RT, TRE>(
+async fn get_oauth_user_data<U, TE, TR, TT, TIR, RT, TRE>(
     oauth_client: &oauth2::Client<TE, TR, TT, TIR, RT, TRE>,
     user_data_url: &str,
     authorization_code: &str,
