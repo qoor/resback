@@ -6,6 +6,7 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Qoo <akck0918@gmail.com>"]
 description = "Respec.team's backend"
+homepage = "https://respec.team"
 repository = "https://github.com/choijunhyuck/resback"
 # We do not want to publish this
 publish = false
