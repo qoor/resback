@@ -2,12 +2,15 @@
 
 mod config;
 mod env;
+mod error;
 mod handler;
 mod jwt;
 mod nickname;
 mod oauth;
 mod schema;
 mod user;
+
+pub use error::Result;
 
 use std::sync::Arc;
 
@@ -51,28 +54,34 @@ async fn main() {
         }
     };
 
+    let app_state = Arc::new(AppState {
+        database: pool.clone(),
+        config: config.clone(),
+        google_oauth: config.google_oauth.to_client(),
+        kakao_oauth: config.kakao_oauth.to_client(),
+        naver_oauth: config.naver_oauth.to_non_standard_client(),
+    });
+
     let app = Router::new()
         .route("/", get(handler::root_handler))
         // For Google OAuth 2.0
         .route("/auth/google", get(handler::auth::auth_google_handler))
-        .route("/auth/google/authorized", get(handler::auth::auth_google_authorized_handler))
         // For Kakao OAuth 2.0
         .route("/auth/kakao", get(handler::auth::auth_kakao_handler))
-        .route("/auth/kakao/authorized", get(handler::auth::auth_kakao_authorized_handler))
         // For Naver OAuth 2.0
         .route("/auth/naver", get(handler::auth::auth_naver_handler))
-        .route("/auth/naver/authorized", get(handler::auth::auth_naver_authorized_handler))
+        .route("/auth/:provider/authorized", get(handler::auth::auth_provider_authorized_handler))
+        .route(
+            "/protected",
+            get(handler::root::protected_handler).route_layer(
+                axum::middleware::from_fn_with_state(app_state.clone(), jwt::authorize_normal_user),
+            ),
+        )
         // Sharing application state
-        .with_state(Arc::new(AppState {
-            database: pool.clone(),
-            config: config.clone(),
-            google_oauth: config.google_oauth.to_client(),
-            kakao_oauth: config.kakao_oauth.to_client(),
-            naver_oauth: config.naver_oauth.to_non_standard_client(),
-        }));
+        .with_state(app_state);
 
     print_server_started(&config.address);
-    Server::bind(&config.address.parse().unwrap()).serve(app.into_make_service()).await.unwrap();
+    Server::bind(&config.address.parse().unwrap()).serve(app.into_make_service()).await;
 }
 
 pub fn about() -> String {
@@ -80,11 +89,15 @@ pub fn about() -> String {
     const DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
     const VERSION: &str = env!("CARGO_PKG_VERSION");
     let authors: Vec<&str> = env!("CARGO_PKG_AUTHORS").split(':').collect();
+    const HOMEPAGE: &str = env!("CARGO_PKG_HOMEPAGE");
     format!(
         "{NAME} - {DESCRIPTION}
+{}
+
 Version: {VERSION}
-Authors: {:?}\n",
-        authors
+Authors: {:?}
+\n",
+        HOMEPAGE, authors
     )
 }
 

@@ -3,9 +3,11 @@
 use std::sync::Arc;
 
 use axum::{
-    extract::{Query, State},
+    extract::{Path, Query, State},
+    http::StatusCode,
     response::{IntoResponse, Redirect},
 };
+use axum_extra::extract::{cookie::Cookie, CookieJar};
 use oauth2::{
     reqwest::async_http_client, AuthorizationCode, CsrfToken, ErrorResponse, RevocableToken, Scope,
     TokenIntrospectionResponse, TokenResponse, TokenType,
@@ -13,7 +15,11 @@ use oauth2::{
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use sqlx::types::chrono::{DateTime, Utc};
 
-use crate::AppState;
+use crate::user::{
+    account::{NormalUser, User, UserType},
+    OAuthUserData,
+};
+use crate::{jwt::generate_jwt_token, oauth::OAuthProvider, AppState};
 
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
@@ -85,37 +91,80 @@ pub async fn auth_naver_handler(State(data): State<Arc<AppState>>) -> impl IntoR
     Redirect::to(auth_url.as_ref())
 }
 
-pub async fn auth_google_authorized_handler(
+pub async fn auth_provider_authorized_handler(
+    cookie_jar: CookieJar,
+    Path(provider): Path<OAuthProvider>,
     Query(query): Query<AuthRequest>,
     State(data): State<Arc<AppState>>,
-) -> String {
-    let user_data: GoogleUser = get_oauth_user_data(
-        &data.google_oauth,
-        &data.config.google_oauth.user_data_uri,
-        &query.code,
+) -> axum::response::Result<(CookieJar, impl IntoResponse)> {
+    let oauth_id: String;
+
+    match provider {
+        OAuthProvider::Google => {
+            let google_user: GoogleUser = get_oauth_user_data(
+                &data.google_oauth,
+                &data.config.google_oauth.user_data_uri,
+                &query.code,
+            )
+            .await;
+
+            oauth_id = google_user.id.to_string();
+        }
+        OAuthProvider::Kakao => {
+            let kakao_user: KakaoUser = get_oauth_user_data(
+                &data.kakao_oauth,
+                &data.config.kakao_oauth.user_data_uri,
+                &query.code,
+            )
+            .await;
+            oauth_id = kakao_user.id.to_string();
+        }
+        OAuthProvider::Naver => {
+            let naver_user_response: NaverUserResponse = get_oauth_user_data(
+                &data.naver_oauth,
+                &data.config.naver_oauth.user_data_uri,
+                &query.code,
+            )
+            .await;
+            oauth_id = naver_user_response.response.id;
+        }
+    }
+
+    let oauth_user = OAuthUserData::new(provider, &oauth_id);
+    let user = NormalUser::login(&oauth_user, &data.database).await;
+    let user = match user {
+        Ok(user) => user,
+        Err(_) => {
+            let user_id = NormalUser::register(&oauth_user, &data.database).await?;
+            NormalUser::from_id(user_id, &data.database).await?
+        }
+    };
+
+    let access_token = generate_jwt_token(
+        data.config.private_key.as_bytes(),
+        chrono::Duration::seconds(data.config.access_token_max_age),
+        UserType::NormalUser,
+        user.id(),
     )
-    .await;
-    serde_json::to_string(&user_data).unwrap()
-}
+    .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err))?;
+    let refresh_token = generate_jwt_token(
+        data.config.private_key.as_bytes(),
+        chrono::Duration::seconds(data.config.refresh_token_max_age),
+        UserType::NormalUser,
+        user.id(),
+    )
+    .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err))?;
 
-pub async fn auth_kakao_authorized_handler(
-    Query(query): Query<AuthRequest>,
-    State(data): State<Arc<AppState>>,
-) -> String {
-    let user_data: KakaoUser =
-        get_oauth_user_data(&data.kakao_oauth, &data.config.kakao_oauth.user_data_uri, &query.code)
-            .await;
-    serde_json::to_string(&user_data).unwrap()
-}
-
-pub async fn auth_naver_authorized_handler(
-    Query(query): Query<AuthRequest>,
-    State(data): State<Arc<AppState>>,
-) -> String {
-    let user_data: NaverUserResponse =
-        get_oauth_user_data(&data.naver_oauth, &data.config.naver_oauth.user_data_uri, &query.code)
-            .await;
-    serde_json::to_string(&user_data).unwrap()
+    Ok((
+        cookie_jar.add(
+            Cookie::build("access_token", access_token.encoded_token().to_string())
+                .path("/")
+                .http_only(true)
+                .max_age(time::Duration::seconds(access_token.claims().expires_in()))
+                .finish(),
+        ),
+        StatusCode::OK,
+    ))
 }
 
 async fn get_oauth_user_data<U, TE, TR, TT, TIR, RT, TRE>(
