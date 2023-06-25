@@ -155,6 +155,8 @@ pub async fn auth_provider_authorized_handler(
     )
     .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err))?;
 
+    user.update_refresh_token(refresh_token.encoded_token(), &data.database).await?;
+
     Ok((
         cookie_jar.add(
             Cookie::build("access_token", access_token.encoded_token().to_string())
