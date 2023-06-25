@@ -87,16 +87,16 @@ impl<'a> Iterator for KoreanGenerator<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.rng.gen_range(0..4) {
-            0 => self.animal_generator.next(),
-            1 => self.character_generator.next(),
-            2 => self.hero_generator.next(),
-            3 => self.monster_generator.next(),
+            0 => self.animal_generator.next_pretty(),
+            1 => self.character_generator.next_pretty(),
+            2 => self.hero_generator.next_pretty(),
+            3 => self.monster_generator.next_pretty(),
             _ => None,
         }
     }
 }
 
-trait KoreanName<'a> {
+pub trait KoreanName<'a> {
     /// Returns new `Generator` that can generate names using the list of nouns
     /// we've defined
     fn with_noun_type(noun_type: NounType, naming: names::Name) -> names::Generator<'a>;
