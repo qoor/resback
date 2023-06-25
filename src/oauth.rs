@@ -15,7 +15,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::env::get_env_or_panic;
 
-#[derive(Debug, Serialize, Deserialize, Clone, sqlx::Type)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, sqlx::Type)]
+#[serde(rename_all = "snake_case")]
 pub enum OAuthProvider {
     Google,
     Kakao,

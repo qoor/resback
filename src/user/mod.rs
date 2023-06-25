@@ -7,3 +7,15 @@ pub struct OAuthUserData {
     provider: OAuthProvider,
     id: String,
 }
+
+impl OAuthUserData {
+    pub fn new(provider: OAuthProvider, id: &str) -> Self {
+        Self { provider, id: id.to_string() }
+    }
+    pub fn provider(self: &Self) -> OAuthProvider {
+        self.provider
+    }
+    pub fn id(self: &Self) -> &str {
+        &self.id
+    }
+}
