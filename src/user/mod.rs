@@ -1,3 +1,5 @@
+// Copyright 2023. The resback authors all rights reserved.
+
 use crate::oauth::OAuthProvider;
 
 pub mod account;

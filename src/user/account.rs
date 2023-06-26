@@ -1,3 +1,5 @@
+// Copyright 2023. The resback authors all rights reserved.
+
 use std::str::FromStr;
 
 use axum::{async_trait, http::StatusCode, Json};

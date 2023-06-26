@@ -1,3 +1,5 @@
+// Copyright 2023. The resback authors all rights reserved.
+
 use axum::{http::StatusCode, Json};
 use serde::Serialize;
 

@@ -1,3 +1,5 @@
+// Copyright 2023. The resback authors all rights reserved.
+
 use rand::{rngs::ThreadRng, Rng};
 
 /// List of Korean adjective words

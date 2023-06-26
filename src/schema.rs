@@ -1,3 +1,5 @@
+// Copyright 2023. The resback authors all rights reserved.
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
