@@ -1,0 +1,3 @@
+#!/bin/bash
+
+mysqldump -u resback -p --no-data --single-transaction resback | sed 's/ AUTO_INCREMENT=[0-9]*//g' > $(date +%F_%T).sql
