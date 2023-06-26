@@ -2,7 +2,7 @@
 
 use std::io;
 
-use jsonwebtoken::DecodingKey;
+use jsonwebtoken::{DecodingKey, EncodingKey};
 
 use crate::{
     env::get_env_or_panic,
@@ -31,6 +31,7 @@ pub struct Config {
 pub struct RSAKey {
     path: std::path::PathBuf,
     key: String,
+    encoding_key: EncodingKey,
     decoding_key: DecodingKey,
 }
 
@@ -40,18 +41,15 @@ impl RSAKey {
             Ok(key) => Ok(Self {
                 path: path.to_path_buf(),
                 key: key.clone(),
+                encoding_key: EncodingKey::from_rsa_pem(key.as_bytes()).unwrap(),
                 decoding_key: DecodingKey::from_rsa_pem(key.as_bytes()).unwrap(),
             }),
             Err(err) => Err(err),
         }
     }
 
-    pub fn as_bytes(&self) -> &[u8] {
-        self.key.as_bytes()
-    }
-
-    pub fn key(&self) -> &str {
-        &self.key
+    pub fn encoding_key(&self) -> &EncodingKey {
+        &self.encoding_key
     }
 
     pub fn decoding_key(&self) -> &DecodingKey {

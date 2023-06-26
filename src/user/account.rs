@@ -81,7 +81,10 @@ impl NormalUser {
         Ok(result.last_insert_id())
     }
 
-    pub async fn login(oauth_user: &OAuthUserData, pool: &sqlx::Pool<MySql>) -> Result<Self> {
+    pub async fn from_oauth_user(
+        oauth_user: &OAuthUserData,
+        pool: &sqlx::Pool<MySql>,
+    ) -> Result<Self> {
         let user_data = sqlx::query_as_unchecked!(
             Self,
             "SELECT * FROM normal_users WHERE oauth_provider = ? AND oauth_id = ?",

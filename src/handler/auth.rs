@@ -141,14 +141,14 @@ pub async fn auth_provider_authorized_handler(
     };
 
     let access_token = generate_jwt_token(
-        data.config.private_key.as_bytes(),
+        data.config.private_key.encoding_key(),
         chrono::Duration::seconds(data.config.access_token_max_age),
         UserType::NormalUser,
         user.id(),
     )
     .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err))?;
     let refresh_token = generate_jwt_token(
-        data.config.private_key.as_bytes(),
+        data.config.private_key.encoding_key(),
         chrono::Duration::seconds(data.config.refresh_token_max_age),
         UserType::NormalUser,
         user.id(),

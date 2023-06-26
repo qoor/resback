@@ -66,7 +66,7 @@ impl TokenData {
 }
 
 pub fn generate_jwt_token(
-    private_key: &[u8],
+    private_key: &EncodingKey,
     expires_in: Duration,
     user_type: UserType,
     user_id: UserId,
@@ -79,14 +79,10 @@ pub fn generate_jwt_token(
         nonce: user_type.to_string(),
     };
 
-    let encoding_key = EncodingKey::from_rsa_pem(private_key).map_err(|_| {
-        Json(ErrorResponse { status: "fail", message: "Failed to generate token".to_string() })
-    });
-
     jsonwebtoken::encode(
         &jsonwebtoken::Header::new(jsonwebtoken::Algorithm::RS256),
         &claims,
-        &encoding_key?,
+        &private_key,
     )
     .map(|token| Ok(TokenData { claims, encoded_token: token }))
     .map_err(|_| {
