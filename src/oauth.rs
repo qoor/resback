@@ -76,7 +76,7 @@ impl OAuthConfig {
 
     /// Returns a OAuth 2.0 client for a provider that conforms to the OAuth 2.0
     /// standard.
-    pub fn to_client(self: &Self) -> BasicClient {
+    pub fn to_client(&self) -> BasicClient {
         let client = BasicClient::new(
             ClientId::new(self.client_id.clone()),
             Some(ClientSecret::new(self.client_secret.clone())),
@@ -95,7 +95,7 @@ impl OAuthConfig {
 
     /// Returns a OAuth 2.0 client for an non-standard OAuth 2.0 provider. For
     /// more details, see [`NonStandardTokenresponse`].
-    pub fn to_non_standard_client(self: &Self) -> NonStandardClient {
+    pub fn to_non_standard_client(&self) -> NonStandardClient {
         match self.provider {
             OAuthProvider::Naver => NonStandardClient::new(
                 ClientId::new(self.client_id.clone()),

@@ -105,7 +105,7 @@ pub trait KoreanName<'a> {
 
     /// Returns Korean nickname with pretty format (ex. "외제차를 뽑은 꼬봉")
     /// instead of `names::Generator`'s name (ex. "외제차를 뽑은-꼬봉")
-    fn next_pretty(self: &mut Self) -> Option<String>;
+    fn next_pretty(&mut self) -> Option<String>;
 }
 
 impl<'a> KoreanName<'a> for names::Generator<'a> {
@@ -118,7 +118,7 @@ impl<'a> KoreanName<'a> for names::Generator<'a> {
         }
     }
 
-    fn next_pretty(self: &mut Self) -> Option<String> {
+    fn next_pretty(&mut self) -> Option<String> {
         match self.next() {
             Some(name) => Some(name.replacen('-', " ", 1)),
             None => None,

@@ -40,11 +40,11 @@ pub struct Claims {
 }
 
 impl Claims {
-    pub fn sub(self: &Self) -> &str {
+    pub fn sub(&self) -> &str {
         &self.sub
     }
 
-    pub fn expires_in(self: &Self) -> i64 {
+    pub fn expires_in(&self) -> i64 {
         self.exp - self.iat
     }
 }
@@ -56,11 +56,11 @@ pub struct TokenData {
 }
 
 impl TokenData {
-    pub fn claims(self: &Self) -> &Claims {
+    pub fn claims(&self) -> &Claims {
         &self.claims
     }
 
-    pub fn encoded_token(self: &Self) -> &str {
+    pub fn encoded_token(&self) -> &str {
         &self.encoded_token
     }
 }

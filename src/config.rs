@@ -46,15 +46,15 @@ impl RSAKey {
         }
     }
 
-    pub fn as_bytes(self: &Self) -> &[u8] {
+    pub fn as_bytes(&self) -> &[u8] {
         self.key.as_bytes()
     }
 
-    pub fn key(self: &Self) -> &str {
+    pub fn key(&self) -> &str {
         &self.key
     }
 
-    pub fn decoding_key(self: &Self) -> &DecodingKey {
+    pub fn decoding_key(&self) -> &DecodingKey {
         &self.decoding_key
     }
 }

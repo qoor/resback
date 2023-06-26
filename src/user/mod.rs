@@ -14,10 +14,10 @@ impl OAuthUserData {
     pub fn new(provider: OAuthProvider, id: &str) -> Self {
         Self { provider, id: id.to_string() }
     }
-    pub fn provider(self: &Self) -> OAuthProvider {
+    pub fn provider(&self) -> OAuthProvider {
         self.provider
     }
-    pub fn id(self: &Self) -> &str {
+    pub fn id(&self) -> &str {
         &self.id
     }
 }
