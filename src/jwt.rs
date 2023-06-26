@@ -5,7 +5,7 @@ use std::sync::Arc;
 use axum::{
     extract::State,
     headers::{authorization::Bearer, Authorization},
-    http::{Request, StatusCode},
+    http::{request, Request, StatusCode},
     middleware::Next,
     response::IntoResponse,
     Json, RequestPartsExt, TypedHeader,
@@ -97,14 +97,33 @@ pub async fn authorize_normal_user<B>(
     next: Next<B>,
 ) -> Result<impl IntoResponse> {
     let (mut parts, body) = req.into_parts();
+    let (user_type, user_id) = authorize_user(&mut parts, &cookies, &data).await?;
 
+    let mut req = Request::from_parts(parts, body);
+
+    // Include the account data to extensions
+    match user_type {
+        UserType::NormalUser => {
+            req.extensions_mut().insert(NormalUser::from_id(user_id, &data.database).await?)
+        }
+        UserType::SeniorUser => unimplemented!(),
+    };
+
+    // Execute the next middleware
+    Ok(next.run(req).await)
+}
+
+async fn authorize_user(
+    parts: &mut request::Parts,
+    cookies: &CookieJar,
+    data: &Arc<AppState>,
+) -> Result<(UserType, UserId)> {
     // Find the access token in the cookies
     //
     // If the access token does not exists as cookie, try to find it in the
     // Authorization header in HTTP headers
-    let access_token = cookies.get("access_token").map(|cookie| cookie.value().to_string());
-    let access_token = match access_token {
-        Some(access_token) => Some(access_token),
+    let access_token = match cookies.get("access_token") {
+        Some(access_token) => Some(access_token.to_string()),
         None => parts
             .extract::<TypedHeader<Authorization<Bearer>>>()
             .await
@@ -137,18 +156,7 @@ pub async fn authorize_normal_user<B>(
         (StatusCode::UNAUTHORIZED, Json(error_response))
     })?;
 
-    let mut req = Request::from_parts(parts, body);
-
-    // Include the account data to extensions
-    match user_type {
-        UserType::NormalUser => req.extensions_mut().insert(
-            NormalUser::from_id(claims.sub().parse::<UserId>().unwrap(), &data.database).await?,
-        ),
-        UserType::SeniorUser => unimplemented!(),
-    };
-
-    // Execute the next middleware
-    Ok(next.run(req).await)
+    Ok((user_type, claims.sub().parse::<UserId>().unwrap()))
 }
 
 /// Returns the full JWT token data if valid, otherwise returns an error
