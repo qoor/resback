@@ -15,11 +15,14 @@ use oauth2::{
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use sqlx::types::chrono::{DateTime, Utc};
 
-use crate::user::{
-    account::{NormalUser, User, UserType},
-    OAuthUserData,
-};
 use crate::{jwt::generate_jwt_token, oauth::OAuthProvider, AppState};
+use crate::{
+    jwt::{ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE},
+    user::{
+        account::{NormalUser, User, UserType},
+        OAuthUserData,
+    },
+};
 
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
@@ -157,13 +160,21 @@ pub async fn auth_provider_authorized_handler(
     user.update_refresh_token(refresh_token.encoded_token(), &data.database).await?;
 
     Ok((
-        cookie_jar.add(
-            Cookie::build("access_token", access_token.encoded_token().to_string())
-                .path("/")
-                .http_only(true)
-                .max_age(time::Duration::seconds(access_token.claims().expires_in()))
-                .finish(),
-        ),
+        cookie_jar
+            .add(
+                Cookie::build(ACCESS_TOKEN_COOKIE, access_token.encoded_token().to_string())
+                    .path("/")
+                    .http_only(true)
+                    .max_age(time::Duration::seconds(access_token.claims().expires_in()))
+                    .finish(),
+            )
+            .add(
+                Cookie::build(REFRESH_TOKEN_COOKIE, refresh_token.encoded_token().to_string())
+                    .path("/")
+                    .http_only(true)
+                    .max_age(time::Duration::seconds(refresh_token.claims().expires_in()))
+                    .finish(),
+            ),
         StatusCode::OK,
     ))
 }
