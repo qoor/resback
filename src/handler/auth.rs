@@ -6,6 +6,7 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Redirect},
+    Json,
 };
 use axum_extra::extract::{cookie::Cookie, CookieJar};
 use oauth2::{
@@ -15,7 +16,13 @@ use oauth2::{
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use sqlx::types::chrono::{DateTime, Utc};
 
-use crate::{jwt::generate_jwt_token, oauth::OAuthProvider, AppState};
+use crate::{
+    error,
+    jwt::{generate_jwt_token, verify_token},
+    oauth::OAuthProvider,
+    user::account::UserId,
+    AppState,
+};
 use crate::{
     jwt::{ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE},
     user::{
@@ -175,6 +182,93 @@ pub async fn auth_provider_authorized_handler(
                     .max_age(time::Duration::seconds(refresh_token.claims().expires_in()))
                     .finish(),
             ),
+        StatusCode::OK,
+    ))
+}
+
+pub async fn auth_refresh_handler(
+    cookie_jar: CookieJar,
+    State(data): State<Arc<AppState>>,
+) -> crate::Result<(CookieJar, impl IntoResponse)> {
+    let refresh_token = cookie_jar
+        .get(REFRESH_TOKEN_COOKIE)
+        .ok_or((
+            StatusCode::FORBIDDEN,
+            Json(error::ErrorResponse {
+                status: "fail",
+                message: "You are not logged in.".to_string(),
+            }),
+        ))?
+        .to_string();
+
+    let claims = verify_token(data.config.public_key.decoding_key(), &refresh_token)
+        .map_err(|_| {
+            let error_response = error::ErrorResponse {
+                status: "fail",
+                message: "Your token is invalid or session has expired".to_string(),
+            };
+            (StatusCode::UNAUTHORIZED, Json(error_response))
+        })
+        .map(|token| token.claims)?;
+
+    let user_type = claims.nonce().parse::<UserType>().map_err(|_| {
+        let error_response =
+            error::ErrorResponse { status: "fail", message: "Unknown user type".to_string() };
+        (StatusCode::UNAUTHORIZED, Json(error_response))
+    })?;
+    let user_id = claims.sub().parse::<UserId>().unwrap();
+
+    let user_token = match user_type {
+        UserType::NormalUser => {
+            let user = NormalUser::from_id(user_id, &data.database).await?;
+
+            user.refresh_token()
+                .ok_or((
+                    StatusCode::UNAUTHORIZED,
+                    Json(error::ErrorResponse {
+                        status: "fail",
+                        message: "You are not logged in".to_string(),
+                    }),
+                ))?
+                .to_string()
+        }
+        UserType::SeniorUser => unimplemented!(),
+    };
+
+    if refresh_token != user_token {
+        return Err((
+            StatusCode::UNAUTHORIZED,
+            Json(error::ErrorResponse {
+                status: "fail",
+                message: "Authorization data and user data do not match".to_string(),
+            }),
+        ));
+    }
+
+    let access_token = generate_jwt_token(
+        &data.config.private_key.encoding_key(),
+        chrono::Duration::seconds(data.config.access_token_max_age),
+        user_type,
+        user_id,
+    )
+    .map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(error::ErrorResponse {
+                status: "error",
+                message: "Failed to generate access token".to_string(),
+            }),
+        )
+    })?;
+
+    Ok((
+        cookie_jar.add(
+            Cookie::build(ACCESS_TOKEN_COOKIE, access_token.encoded_token().to_string())
+                .path("/")
+                .http_only(true)
+                .max_age(time::Duration::seconds(access_token.claims().expires_in()))
+                .finish(),
+        ),
         StatusCode::OK,
     ))
 }

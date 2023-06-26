@@ -58,6 +58,8 @@ impl std::fmt::Display for UserType {
 pub trait User: Sized {
     fn id(&self) -> UserId;
 
+    fn refresh_token(&self) -> Option<&str>;
+
     async fn from_id(id: UserId, pool: &sqlx::Pool<MySql>) -> Result<Self>;
 }
 
@@ -129,6 +131,10 @@ impl NormalUser {
 impl User for NormalUser {
     fn id(&self) -> UserId {
         self.id
+    }
+
+    fn refresh_token(&self) -> Option<&str> {
+        self.refresh_token.as_deref()
     }
 
     async fn from_id(id: UserId, pool: &sqlx::Pool<MySql>) -> Result<Self> {

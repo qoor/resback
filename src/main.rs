@@ -71,6 +71,7 @@ async fn main() {
         // For Naver OAuth 2.0
         .route("/auth/naver", get(handler::auth::auth_naver_handler))
         .route("/auth/:provider/authorized", get(handler::auth::auth_provider_authorized_handler))
+        .route("/auth/refresh", get(handler::auth::auth_refresh_handler))
         .route(
             "/protected",
             get(handler::root::protected_handler).route_layer(

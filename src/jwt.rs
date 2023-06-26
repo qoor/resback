@@ -50,6 +50,10 @@ impl Claims {
     pub fn expires_in(&self) -> i64 {
         self.exp - self.iat
     }
+
+    pub fn nonce(&self) -> &str {
+        &self.nonce
+    }
 }
 
 #[derive(Debug, Clone)]
