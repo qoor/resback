@@ -166,7 +166,7 @@ async fn authorize_user(
 ///
 /// According to jsonwebtoken library, decoding RSA pem key is very
 /// expensive. So it takes an already decoded key.
-fn verify_token(
+pub fn verify_token(
     decoding_key: &DecodingKey,
     token: &str,
 ) -> jsonwebtoken::errors::Result<jsonwebtoken::TokenData<Claims>> {
