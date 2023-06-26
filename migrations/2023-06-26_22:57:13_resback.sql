@@ -27,6 +27,7 @@ CREATE TABLE `normal_users` (
   `oauth_provider` varchar(10) NOT NULL,
   `oauth_id` varchar(64) NOT NULL,
   `nickname` varchar(32) NOT NULL,
+  `refresh_token` varchar(2048) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`),
@@ -49,6 +50,7 @@ CREATE TABLE `senior_users` (
   `phone` varchar(32) NOT NULL,
   `nickname` varchar(32) NOT NULL,
   `career_file_url` varchar(2048) NOT NULL,
+  `refresh_token` varchar(2048) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`),
@@ -65,4 +67,4 @@ CREATE TABLE `senior_users` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2023-06-22  1:07:26
+-- Dump completed on 2023-06-26 22:57:25
