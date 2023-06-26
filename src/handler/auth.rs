@@ -131,8 +131,7 @@ pub async fn auth_provider_authorized_handler(
     }
 
     let oauth_user = OAuthUserData::new(provider, &oauth_id);
-    let user = NormalUser::login(&oauth_user, &data.database).await;
-    let user = match user {
+    let user = match NormalUser::from_oauth_user(&oauth_user, &data.database).await {
         Ok(user) => user,
         Err(_) => {
             let user_id = NormalUser::register(&oauth_user, &data.database).await?;
