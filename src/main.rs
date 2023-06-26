@@ -81,7 +81,7 @@ async fn main() {
         .with_state(app_state);
 
     print_server_started(&config.address);
-    Server::bind(&config.address.parse().unwrap()).serve(app.into_make_service()).await;
+    Server::bind(&config.address.parse().unwrap()).serve(app.into_make_service()).await.unwrap();
 }
 
 pub fn about() -> String {

@@ -53,14 +53,10 @@ impl std::fmt::Display for UserType {
 }
 
 #[async_trait]
-pub trait User: Sized + UserTable {
+pub trait User: Sized {
     fn id(self: &Self) -> UserId;
 
     async fn from_id(id: UserId, pool: &sqlx::Pool<MySql>) -> Result<Self>;
-}
-
-trait UserTable {
-    fn table() -> &'static str;
 }
 
 impl NormalUser {
@@ -111,25 +107,16 @@ impl NormalUser {
         token: &str,
         pool: &sqlx::Pool<MySql>,
     ) -> Result<&Self> {
-        let result =
-            sqlx::query!("UPDATE normal_users SET refresh_token = ? WHERE id = ?", token, self.id)
-                .execute(pool)
-                .await
-                .map_err(|err| {
-                    let error_response = ErrorResponse {
-                        status: "error",
-                        message: format!("Database error: {}", err),
-                    };
-                    (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
-                })?;
+        sqlx::query!("UPDATE normal_users SET refresh_token = ? WHERE id = ?", token, self.id)
+            .execute(pool)
+            .await
+            .map_err(|err| {
+                let error_response =
+                    ErrorResponse { status: "error", message: format!("Database error: {}", err) };
+                (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
+            })?;
 
         Ok(&self)
-    }
-}
-
-impl UserTable for NormalUser {
-    fn table() -> &'static str {
-        "normal_users"
     }
 }
 
