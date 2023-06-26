@@ -17,7 +17,7 @@ publish = false
 axum = { version = "0.6.18", features = ["headers"] }
 axum-extra = { version = "0.7.4", features = ["cookie"] }
 chrono = { version = "0.4.26", features = ["serde"] }
-dotenv = "0.15.0"
+dotenvy = "0.15.7"
 jsonwebtoken = { version = "8.3.0", features = ["use_pem"] }
 names = { version = "0.14.0", default-features = false }
 oauth2 = "4.4.1"

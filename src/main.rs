@@ -16,7 +16,7 @@ use std::sync::Arc;
 
 use axum::{routing::get, Router, Server};
 use config::Config;
-use dotenv::dotenv;
+use dotenvy::dotenv;
 use oauth::NonStandardClient;
 use sqlx::{mysql::MySqlPoolOptions, MySql};
 
