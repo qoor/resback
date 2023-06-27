@@ -106,7 +106,7 @@ pub async fn auth_provider_authorized_handler(
     Path(provider): Path<OAuthProvider>,
     Query(query): Query<AuthRequest>,
     State(data): State<Arc<AppState>>,
-) -> axum::response::Result<(CookieJar, impl IntoResponse)> {
+) -> axum::response::Result<impl IntoResponse> {
     let oauth_id: String;
 
     match provider {
@@ -189,7 +189,7 @@ pub async fn auth_provider_authorized_handler(
 pub async fn auth_refresh_handler(
     cookie_jar: CookieJar,
     State(data): State<Arc<AppState>>,
-) -> crate::Result<(CookieJar, impl IntoResponse)> {
+) -> crate::Result<impl IntoResponse> {
     let refresh_token = cookie_jar
         .get(REFRESH_TOKEN_COOKIE)
         .ok_or((
