@@ -65,25 +65,21 @@ async fn main() {
         naver_oauth: config.naver_oauth.to_non_standard_client(),
     });
 
-    let app = Router::new()
-        .route("/", get(handler::root))
-        // For Google OAuth 2.0
+    let root_routers = Router::new().route("/", get(handler::root)).route(
+        "/protected",
+        get(handler::root::protected).route_layer(axum::middleware::from_fn_with_state(
+            app_state.clone(),
+            jwt::authorize_normal_user,
+        )),
+    );
+    let auth_routers = Router::new()
         .route("/auth/google", get(handler::auth::auth_google))
-        // For Kakao OAuth 2.0
         .route("/auth/kakao", get(handler::auth::auth_kakao))
-        // For Naver OAuth 2.0
         .route("/auth/naver", get(handler::auth::auth_naver))
         .route("/auth/:provider/authorized", get(handler::auth::auth_provider_authorized))
-        .route("/auth/refresh", patch(handler::auth::auth_refresh))
-        .route(
-            "/protected",
-            get(handler::root::protected).route_layer(axum::middleware::from_fn_with_state(
-                app_state.clone(),
-                jwt::authorize_normal_user,
-            )),
-        )
-        // Sharing application state
-        .with_state(app_state);
+        .route("/auth/refresh", patch(handler::auth::auth_refresh));
+
+    let app = Router::new().merge(root_routers).merge(auth_routers).with_state(app_state);
 
     print_server_started(&config.address);
     Server::bind(&config.address.parse().unwrap()).serve(app.into_make_service()).await.unwrap();
