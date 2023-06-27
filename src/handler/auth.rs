@@ -78,7 +78,7 @@ struct NaverUser {
     // mobile: String,
 }
 
-pub async fn auth_google_handler(State(data): State<Arc<AppState>>) -> impl IntoResponse {
+pub async fn auth_google(State(data): State<Arc<AppState>>) -> impl IntoResponse {
     let (auth_url, _csrf_token) = data
         .google_oauth
         .authorize_url(CsrfToken::new_random)
@@ -89,19 +89,19 @@ pub async fn auth_google_handler(State(data): State<Arc<AppState>>) -> impl Into
     Redirect::to(auth_url.as_ref())
 }
 
-pub async fn auth_kakao_handler(State(data): State<Arc<AppState>>) -> impl IntoResponse {
+pub async fn auth_kakao(State(data): State<Arc<AppState>>) -> impl IntoResponse {
     let (auth_url, _csrf_token) = data.kakao_oauth.authorize_url(CsrfToken::new_random).url();
 
     Redirect::to(auth_url.as_ref())
 }
 
-pub async fn auth_naver_handler(State(data): State<Arc<AppState>>) -> impl IntoResponse {
+pub async fn auth_naver(State(data): State<Arc<AppState>>) -> impl IntoResponse {
     let (auth_url, _csrf_token) = data.naver_oauth.authorize_url(CsrfToken::new_random).url();
 
     Redirect::to(auth_url.as_ref())
 }
 
-pub async fn auth_provider_authorized_handler(
+pub async fn auth_provider_authorized(
     cookie_jar: CookieJar,
     Path(provider): Path<OAuthProvider>,
     Query(query): Query<AuthRequest>,
@@ -182,11 +182,11 @@ pub async fn auth_provider_authorized_handler(
                     .max_age(time::Duration::seconds(refresh_token.claims().expires_in()))
                     .finish(),
             ),
-        StatusCode::OK,
+        Json(serde_json::json!({ "id": user.id() })),
     ))
 }
 
-pub async fn auth_refresh_handler(
+pub async fn auth_refresh(
     cookie_jar: CookieJar,
     State(data): State<Arc<AppState>>,
 ) -> crate::Result<impl IntoResponse> {

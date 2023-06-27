@@ -3,4 +3,4 @@
 pub mod auth;
 pub mod root;
 
-pub use root::root_handler;
+pub use root::root;

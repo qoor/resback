@@ -14,7 +14,10 @@ pub use error::Result;
 
 use std::sync::Arc;
 
-use axum::{routing::get, Router, Server};
+use axum::{
+    routing::{get, patch},
+    Router, Server,
+};
 use config::Config;
 use dotenvy::dotenv;
 use oauth::NonStandardClient;
@@ -63,20 +66,21 @@ async fn main() {
     });
 
     let app = Router::new()
-        .route("/", get(handler::root_handler))
+        .route("/", get(handler::root))
         // For Google OAuth 2.0
-        .route("/auth/google", get(handler::auth::auth_google_handler))
+        .route("/auth/google", get(handler::auth::auth_google))
         // For Kakao OAuth 2.0
-        .route("/auth/kakao", get(handler::auth::auth_kakao_handler))
+        .route("/auth/kakao", get(handler::auth::auth_kakao))
         // For Naver OAuth 2.0
-        .route("/auth/naver", get(handler::auth::auth_naver_handler))
-        .route("/auth/:provider/authorized", get(handler::auth::auth_provider_authorized_handler))
-        .route("/auth/refresh", get(handler::auth::auth_refresh_handler))
+        .route("/auth/naver", get(handler::auth::auth_naver))
+        .route("/auth/:provider/authorized", get(handler::auth::auth_provider_authorized))
+        .route("/auth/refresh", patch(handler::auth::auth_refresh))
         .route(
             "/protected",
-            get(handler::root::protected_handler).route_layer(
-                axum::middleware::from_fn_with_state(app_state.clone(), jwt::authorize_normal_user),
-            ),
+            get(handler::root::protected).route_layer(axum::middleware::from_fn_with_state(
+                app_state.clone(),
+                jwt::authorize_normal_user,
+            )),
         )
         // Sharing application state
         .with_state(app_state);

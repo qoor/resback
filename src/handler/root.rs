@@ -2,10 +2,10 @@
 
 use crate::about;
 
-pub async fn root_handler() -> String {
+pub async fn root() -> String {
     about()
 }
 
-pub async fn protected_handler() -> &'static str {
+pub async fn protected() -> &'static str {
     "Hello, World!"
 }
