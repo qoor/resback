@@ -2,7 +2,9 @@
 
 use std::str::FromStr;
 
+use argon2::{password_hash::SaltString, Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use axum::{async_trait, http::StatusCode, Json};
+use rand::rngs::OsRng;
 use serde::{Deserialize, Serialize};
 use sqlx::{
     types::chrono::{DateTime, Utc},
@@ -12,12 +14,16 @@ use sqlx::{
 use crate::{
     error::ErrorResponse,
     nickname::{self, KoreanGenerator},
+    schema::SeniorRegisterSchema,
 };
 use crate::{oauth::OAuthProvider, Result};
 
 use super::OAuthUserData;
 
 pub type UserId = u64;
+
+const FRONT_PEPPER: &str = "dV9h;TroC@ref}L}\\{_4d31.Fcv?ljN";
+const BACK_PEPPER: &str = "s!\\uf@99E95K1B[]P91H{U\"SgI}*Id!";
 
 #[derive(Debug, sqlx::FromRow, Serialize, Deserialize, Clone)]
 pub struct NormalUser {
@@ -170,6 +176,142 @@ pub struct SeniorUser {
     phone: String,
     nickname: String,
     career_file_url: String,
+    refresh_token: Option<String>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
+}
+
+impl SeniorUser {
+    pub async fn register(
+        register_data: &SeniorRegisterSchema,
+        pool: &sqlx::Pool<MySql>,
+    ) -> Result<UserId> {
+        if register_data.email.is_empty() || register_data.password.is_empty() {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(ErrorResponse {
+                    status: "fail",
+                    message: "email or password is empty".to_string(),
+                }),
+            ));
+        }
+
+        let salt = SaltString::generate(&mut OsRng);
+        let password = String::new() + FRONT_PEPPER + &register_data.password + BACK_PEPPER;
+        let hashed_password = Argon2::default()
+            .hash_password(password.as_bytes(), &salt)
+            .map_err(|err| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ErrorResponse {
+                        status: "error",
+                        message: format!("Error while hashing password: {}", err),
+                    }),
+                )
+            })
+            .map(|hash| hash.to_string())?;
+
+        let user = sqlx::query!(
+            "INSERT INTO senior_users (email, password, name, phone, career_file_url) VALUES (?, ?, ?, ?, ?)",
+            register_data.email,
+            hashed_password,
+            register_data.name,
+            register_data.phone,
+            register_data.career_file_url
+        ).execute(pool).await.map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse {
+            status: "error",
+            message: format!("Database error: {}", err)
+        })))?;
+
+        Ok(user.last_insert_id())
+    }
+
+    pub async fn login(email: &str, password: &str, pool: &sqlx::Pool<MySql>) -> Result<Self> {
+        if email.is_empty() || password.is_empty() {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(ErrorResponse {
+                    status: "fail",
+                    message: "email or password is empty".to_string(),
+                }),
+            ));
+        }
+
+        let user =
+            sqlx::query_as_unchecked!(Self, "SELECT * FROM senior_users WHERE email = ?", email)
+                .fetch_optional(pool)
+                .await
+                .map_err(|err| {
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        Json(ErrorResponse {
+                            status: "error",
+                            message: format!("Database error: {}", err),
+                        }),
+                    )
+                })?
+                .ok_or((
+                    StatusCode::BAD_REQUEST,
+                    Json(ErrorResponse {
+                        status: "fail",
+                        message: "Invalid email or password".to_string(),
+                    }),
+                ))?;
+
+        let password = String::new() + FRONT_PEPPER + password + BACK_PEPPER;
+        let password_verified = match PasswordHash::new(&user.password) {
+            Ok(parsed_hash) => Argon2::default()
+                .verify_password(password.as_bytes(), &parsed_hash)
+                .map_or(false, |_| true),
+            Err(_) => false,
+        };
+
+        if !password_verified {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(ErrorResponse {
+                    status: "fail",
+                    message: "Invalid email or password".to_string(),
+                }),
+            ));
+        }
+
+        Ok(user)
+    }
+}
+
+#[async_trait]
+impl User for SeniorUser {
+    fn id(&self) -> UserId {
+        self.id
+    }
+
+    fn refresh_token(&self) -> Option<&str> {
+        self.refresh_token.as_deref()
+    }
+
+    async fn from_id(id: UserId, pool: &sqlx::Pool<MySql>) -> Result<Self> {
+        let user_data =
+            sqlx::query_as_unchecked!(Self, "SELECT * FROM senior_users WHERE id = ?", id)
+                .fetch_optional(pool)
+                .await
+                .map_err(|err| {
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        Json(ErrorResponse {
+                            status: "error",
+                            message: format!("Database error: {}", err),
+                        }),
+                    )
+                })?
+                .ok_or((
+                    StatusCode::BAD_REQUEST,
+                    Json(ErrorResponse {
+                        status: "fail",
+                        message: "Invalid senior user id".to_string(),
+                    }),
+                ));
+
+        user_data
+    }
 }
