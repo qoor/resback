@@ -67,6 +67,8 @@ pub trait User: Sized {
     fn refresh_token(&self) -> Option<&str>;
 
     async fn from_id(id: UserId, pool: &sqlx::Pool<MySql>) -> Result<Self>;
+
+    async fn update_refresh_token(&self, token: &str, pool: &sqlx::Pool<MySql>) -> Result<&Self>;
 }
 
 impl NormalUser {
@@ -114,23 +116,6 @@ impl NormalUser {
 
         user_data
     }
-
-    pub async fn update_refresh_token(
-        &self,
-        token: &str,
-        pool: &sqlx::Pool<MySql>,
-    ) -> Result<&Self> {
-        sqlx::query!("UPDATE normal_users SET refresh_token = ? WHERE id = ?", token, self.id)
-            .execute(pool)
-            .await
-            .map_err(|err| {
-                let error_response =
-                    ErrorResponse { status: "error", message: format!("Database error: {}", err) };
-                (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
-            })?;
-
-        Ok(&self)
-    }
 }
 
 #[async_trait]
@@ -164,6 +149,19 @@ impl User for NormalUser {
                 });
 
         user_data
+    }
+
+    async fn update_refresh_token(&self, token: &str, pool: &sqlx::Pool<MySql>) -> Result<&Self> {
+        sqlx::query!("UPDATE normal_users SET refresh_token = ? WHERE id = ?", token, self.id)
+            .execute(pool)
+            .await
+            .map_err(|err| {
+                let error_response =
+                    ErrorResponse { status: "error", message: format!("Database error: {}", err) };
+                (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
+            })?;
+
+        Ok(&self)
     }
 }
 
@@ -313,5 +311,18 @@ impl User for SeniorUser {
                 ));
 
         user_data
+    }
+
+    async fn update_refresh_token(&self, token: &str, pool: &sqlx::Pool<MySql>) -> Result<&Self> {
+        sqlx::query!("UPDATE senior_users SET refresh_token = ? WHERE id = ?", token, self.id)
+            .execute(pool)
+            .await
+            .map_err(|err| {
+                let error_response =
+                    ErrorResponse { status: "error", message: format!("Database error: {}", err) };
+                (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
+            })?;
+
+        Ok(&self)
     }
 }
