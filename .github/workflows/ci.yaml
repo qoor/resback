@@ -9,20 +9,24 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  check:
-    name: Check
+  check_and_build:
+    name: Check and build
     runs-on: ubuntu-22.04
 
     services:
       mariadb:
         image: mariadb
-        ports:
-          - 3306:3306
         env:
           MARIADB_USER: resback
           MARIADB_PASSWORD: kEH8A6SipKz0mFRCZ3MPjwOp1F4kfMw
           MARIADB_DATABASE: resback
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: true
+          MARIADB_MYSQL_LOCALHOST_USER: 1
+          MARIADB_MYSQL_LOCALHOST_GRANTS: USAGE
+        ports:
+          - 3306:3306
+        options: --health-cmd="healthcheck.sh --su-mysql --connect --innodb_initialized" --health-interval=10s --health-timeout=5s --health-retries=3
 
     steps:
       - name: Checkout sources
@@ -53,34 +57,6 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: check
-
-  test:
-    name: Test Suite
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v3
-
-      - name: Install Rust stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-
-      - name: Caching cargo
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo
-
-      - name: Setup database
-        run: |
-          cargo install --locked sqlx-cli --features mysql || true
-          sqlx db setup
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1
