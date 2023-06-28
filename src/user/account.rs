@@ -22,8 +22,7 @@ use super::OAuthUserData;
 
 pub type UserId = u64;
 
-const FRONT_PEPPER: &str = "dV9h;TroC@ref}L}\\{_4d31.Fcv?ljN";
-const BACK_PEPPER: &str = "s!\\uf@99E95K1B[]P91H{U\"SgI}*Id!";
+const PEPPER: &str = "dV9h;TroC@ref}L}\\{_4d31.Fcv?ljN";
 
 #[derive(Debug, sqlx::FromRow, Serialize, Deserialize, Clone)]
 pub struct NormalUser {
@@ -196,19 +195,24 @@ impl SeniorUser {
         }
 
         let salt = SaltString::generate(&mut OsRng);
-        let password = String::new() + FRONT_PEPPER + &register_data.password + BACK_PEPPER;
-        let hashed_password = Argon2::default()
-            .hash_password(password.as_bytes(), &salt)
-            .map_err(|err| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    ErrorResponse {
-                        status: "error",
-                        message: format!("Error while hashing password: {}", err),
-                    },
-                )
-            })
-            .map(|hash| hash.to_string())?;
+        let hashed_password = Argon2::new_with_secret(
+            PEPPER.as_bytes(),
+            argon2::Algorithm::default(),
+            argon2::Version::default(),
+            argon2::Params::default(),
+        )
+        .unwrap()
+        .hash_password(register_data.password.as_bytes(), &salt)
+        .map_err(|err| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                ErrorResponse {
+                    status: "error",
+                    message: format!("Error while hashing password: {}", err),
+                },
+            )
+        })
+        .map(|hash| hash.to_string())?;
 
         let user = sqlx::query!(
             "INSERT INTO senior_users (email, password, name, phone, career_file_url) VALUES (?, ?, ?, ?, ?)",
@@ -254,11 +258,16 @@ impl SeniorUser {
                     },
                 ))?;
 
-        let password = String::new() + FRONT_PEPPER + password + BACK_PEPPER;
         let password_verified = match PasswordHash::new(&user.password) {
-            Ok(parsed_hash) => Argon2::default()
-                .verify_password(password.as_bytes(), &parsed_hash)
-                .map_or(false, |_| true),
+            Ok(parsed_hash) => Argon2::new_with_secret(
+                PEPPER.as_bytes(),
+                argon2::Algorithm::default(),
+                argon2::Version::default(),
+                argon2::Params::default(),
+            )
+            .unwrap()
+            .verify_password(password.as_bytes(), &parsed_hash)
+            .map_or(false, |_| true),
             Err(_) => false,
         };
 
