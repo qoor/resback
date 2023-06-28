@@ -5,7 +5,7 @@ use std::sync::Arc;
 use axum::{
     extract::State,
     headers::{authorization::Bearer, Authorization},
-    http::{request, Request, StatusCode},
+    http::{Request, StatusCode},
     middleware::Next,
     response::IntoResponse,
     RequestPartsExt, TypedHeader,
@@ -107,7 +107,21 @@ pub async fn authorize_normal_user<B>(
     next: Next<B>,
 ) -> Result<impl IntoResponse> {
     let (mut parts, body) = req.into_parts();
-    let (user_type, user_id) = authorize_user(&mut parts, &cookies, &data).await?;
+
+    // Find the access token in the cookies
+    //
+    // If the access token does not exists as cookie, try to find it in the
+    // Authorization header in HTTP headers
+    let access_token = match cookies.get(ACCESS_TOKEN_COOKIE) {
+        Some(access_token) => Some(access_token.to_string()),
+        None => parts
+            .extract::<TypedHeader<Authorization<Bearer>>>()
+            .await
+            .ok()
+            .map(|auth_value| auth_value.token().to_string()),
+    };
+
+    let (user_type, user_id) = get_user_info_from_token(access_token.as_deref(), &data).await?;
 
     let mut req = Request::from_parts(parts, body);
 
@@ -123,25 +137,11 @@ pub async fn authorize_normal_user<B>(
     Ok(next.run(req).await)
 }
 
-async fn authorize_user(
-    parts: &mut request::Parts,
-    cookies: &CookieJar,
+pub async fn get_user_info_from_token(
+    token: Option<&str>,
     data: &Arc<AppState>,
 ) -> Result<(UserType, UserId)> {
-    // Find the access token in the cookies
-    //
-    // If the access token does not exists as cookie, try to find it in the
-    // Authorization header in HTTP headers
-    let access_token = match cookies.get(ACCESS_TOKEN_COOKIE) {
-        Some(access_token) => Some(access_token.to_string()),
-        None => parts
-            .extract::<TypedHeader<Authorization<Bearer>>>()
-            .await
-            .ok()
-            .map(|auth_value| auth_value.token().to_string()),
-    };
-
-    let access_token = access_token.ok_or_else(|| {
+    let token = token.ok_or_else(|| {
         (
             StatusCode::UNAUTHORIZED,
             ErrorResponse {
@@ -152,7 +152,7 @@ async fn authorize_user(
     })?;
 
     // Check if the access token has expired or invalid
-    let claims = verify_token(data.config.public_key.decoding_key(), &access_token)
+    let claims = verify_token(data.config.public_key.decoding_key(), &token)
         .map_err(|_| {
             (
                 StatusCode::UNAUTHORIZED,

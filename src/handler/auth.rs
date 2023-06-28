@@ -19,7 +19,7 @@ use sqlx::types::chrono::{DateTime, Utc};
 
 use crate::{
     error,
-    jwt::{generate_jwt_token, verify_token},
+    jwt::{generate_jwt_token, get_user_info_from_token},
     oauth::OAuthProvider,
     schema::SeniorLoginSchema,
     user::account::{SeniorUser, UserId},
@@ -168,33 +168,10 @@ pub async fn auth_refresh(
     cookie_jar: CookieJar,
     State(data): State<Arc<AppState>>,
 ) -> crate::Result<impl IntoResponse> {
-    let refresh_token = cookie_jar
-        .get(REFRESH_TOKEN_COOKIE)
-        .ok_or((
-            StatusCode::FORBIDDEN,
-            error::ErrorResponse { status: "fail", message: "You are not logged in.".to_string() },
-        ))?
-        .to_string();
+    let refresh_token = cookie_jar.get(REFRESH_TOKEN_COOKIE).map(|token| token.to_string());
 
-    let claims = verify_token(data.config.public_key.decoding_key(), &refresh_token)
-        .map_err(|_| {
-            (
-                StatusCode::UNAUTHORIZED,
-                error::ErrorResponse {
-                    status: "fail",
-                    message: "Your token is invalid or session has expired".to_string(),
-                },
-            )
-        })
-        .map(|token| token.claims)?;
-
-    let user_type = claims.nonce().parse::<UserType>().map_err(|_| {
-        (
-            StatusCode::UNAUTHORIZED,
-            error::ErrorResponse { status: "fail", message: "Unknown user type".to_string() },
-        )
-    })?;
-    let user_id = claims.sub().parse::<UserId>().unwrap();
+    let (user_type, user_id) = get_user_info_from_token(refresh_token.as_deref(), &data).await?;
+    let refresh_token = refresh_token.unwrap();
 
     let user_token = match user_type {
         UserType::NormalUser => {
