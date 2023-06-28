@@ -172,27 +172,27 @@ pub async fn auth_refresh(
         .get(REFRESH_TOKEN_COOKIE)
         .ok_or((
             StatusCode::FORBIDDEN,
-            Json(error::ErrorResponse {
-                status: "fail",
-                message: "You are not logged in.".to_string(),
-            }),
+            error::ErrorResponse { status: "fail", message: "You are not logged in.".to_string() },
         ))?
         .to_string();
 
     let claims = verify_token(data.config.public_key.decoding_key(), &refresh_token)
         .map_err(|_| {
-            let error_response = error::ErrorResponse {
-                status: "fail",
-                message: "Your token is invalid or session has expired".to_string(),
-            };
-            (StatusCode::UNAUTHORIZED, Json(error_response))
+            (
+                StatusCode::UNAUTHORIZED,
+                error::ErrorResponse {
+                    status: "fail",
+                    message: "Your token is invalid or session has expired".to_string(),
+                },
+            )
         })
         .map(|token| token.claims)?;
 
     let user_type = claims.nonce().parse::<UserType>().map_err(|_| {
-        let error_response =
-            error::ErrorResponse { status: "fail", message: "Unknown user type".to_string() };
-        (StatusCode::UNAUTHORIZED, Json(error_response))
+        (
+            StatusCode::UNAUTHORIZED,
+            error::ErrorResponse { status: "fail", message: "Unknown user type".to_string() },
+        )
     })?;
     let user_id = claims.sub().parse::<UserId>().unwrap();
 
@@ -209,16 +209,16 @@ pub async fn auth_refresh(
 
     let user_token = user_token.ok_or((
         StatusCode::UNAUTHORIZED,
-        Json(error::ErrorResponse { status: "fail", message: "You are not logged in".to_string() }),
+        error::ErrorResponse { status: "fail", message: "You are not logged in".to_string() },
     ))?;
 
     if refresh_token != user_token {
         return Err((
             StatusCode::UNAUTHORIZED,
-            Json(error::ErrorResponse {
+            error::ErrorResponse {
                 status: "fail",
                 message: "Authorization data and user data do not match".to_string(),
-            }),
+            },
         ));
     }
 
@@ -272,8 +272,7 @@ async fn add_access_token_to_cookie_jar(
         chrono::Duration::seconds(data.config.access_token_max_age),
         user_type,
         user_id,
-    )
-    .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err))?;
+    )?;
 
     Ok((
         cookie_jar.add(
@@ -304,8 +303,7 @@ where
         chrono::Duration::seconds(data.config.refresh_token_max_age),
         user_type,
         user.id(),
-    )
-    .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err))?;
+    )?;
 
     user.update_refresh_token(refresh_token.encoded_token(), &data.database).await?;
 

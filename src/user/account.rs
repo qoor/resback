@@ -83,9 +83,10 @@ impl NormalUser {
         .execute(pool)
         .await
         .map_err(|err| {
-            let error_response =
-                ErrorResponse { status: "error", message: format!("Database error: {}", err) };
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                ErrorResponse { status: "error", message: format!("Database error: {}", err) },
+            )
         })?;
 
         Ok(result.last_insert_id())
@@ -104,15 +105,15 @@ impl NormalUser {
         .fetch_optional(pool)
         .await
         .map_err(|err| {
-            let error_response =
-                ErrorResponse { status: "error", message: format!("Database error: {}", err) };
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                ErrorResponse { status: "error", message: format!("Database error: {}", err) },
+            )
         })?
-        .ok_or({
-            let error_response =
-                ErrorResponse { status: "fail", message: "Invalid OAuth user data".to_string() };
-            (StatusCode::BAD_REQUEST, Json(error_response))
-        });
+        .ok_or((
+            StatusCode::BAD_REQUEST,
+            ErrorResponse { status: "fail", message: "Invalid OAuth user data".to_string() },
+        ));
 
         user_data
     }
@@ -134,19 +135,21 @@ impl User for NormalUser {
                 .fetch_optional(pool)
                 .await
                 .map_err(|err| {
-                    let error_response = ErrorResponse {
-                        status: "error",
-                        message: format!("Database error: {}", err),
-                    };
-                    (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        ErrorResponse {
+                            status: "error",
+                            message: format!("Database error: {}", err),
+                        },
+                    )
                 })?
-                .ok_or({
-                    let error_response = ErrorResponse {
+                .ok_or((
+                    StatusCode::BAD_REQUEST,
+                    ErrorResponse {
                         status: "fail",
                         message: "Invalid OAuth user data".to_string(),
-                    };
-                    (StatusCode::BAD_REQUEST, Json(error_response))
-                });
+                    },
+                ));
 
         user_data
     }
@@ -156,9 +159,10 @@ impl User for NormalUser {
             .execute(pool)
             .await
             .map_err(|err| {
-                let error_response =
-                    ErrorResponse { status: "error", message: format!("Database error: {}", err) };
-                (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    ErrorResponse { status: "error", message: format!("Database error: {}", err) },
+                )
             })?;
 
         Ok(&self)
@@ -187,10 +191,7 @@ impl SeniorUser {
         if register_data.email.is_empty() || register_data.password.is_empty() {
             return Err((
                 StatusCode::BAD_REQUEST,
-                Json(ErrorResponse {
-                    status: "fail",
-                    message: "email or password is empty".to_string(),
-                }),
+                ErrorResponse { status: "fail", message: "email or password is empty".to_string() },
             ));
         }
 
@@ -201,10 +202,10 @@ impl SeniorUser {
             .map_err(|err| {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(ErrorResponse {
+                    ErrorResponse {
                         status: "error",
                         message: format!("Error while hashing password: {}", err),
-                    }),
+                    },
                 )
             })
             .map(|hash| hash.to_string())?;
@@ -216,10 +217,10 @@ impl SeniorUser {
             register_data.name,
             register_data.phone,
             register_data.career_file_url
-        ).execute(pool).await.map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, Json(ErrorResponse {
+        ).execute(pool).await.map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, ErrorResponse {
             status: "error",
             message: format!("Database error: {}", err)
-        })))?;
+        }))?;
 
         Ok(user.last_insert_id())
     }
@@ -228,10 +229,7 @@ impl SeniorUser {
         if email.is_empty() || password.is_empty() {
             return Err((
                 StatusCode::BAD_REQUEST,
-                Json(ErrorResponse {
-                    status: "fail",
-                    message: "email or password is empty".to_string(),
-                }),
+                ErrorResponse { status: "fail", message: "email or password is empty".to_string() },
             ));
         }
 
@@ -242,18 +240,18 @@ impl SeniorUser {
                 .map_err(|err| {
                     (
                         StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(ErrorResponse {
+                        ErrorResponse {
                             status: "error",
                             message: format!("Database error: {}", err),
-                        }),
+                        },
                     )
                 })?
                 .ok_or((
                     StatusCode::BAD_REQUEST,
-                    Json(ErrorResponse {
+                    ErrorResponse {
                         status: "fail",
                         message: "Invalid email or password".to_string(),
-                    }),
+                    },
                 ))?;
 
         let password = String::new() + FRONT_PEPPER + password + BACK_PEPPER;
@@ -267,10 +265,7 @@ impl SeniorUser {
         if !password_verified {
             return Err((
                 StatusCode::BAD_REQUEST,
-                Json(ErrorResponse {
-                    status: "fail",
-                    message: "Invalid email or password".to_string(),
-                }),
+                ErrorResponse { status: "fail", message: "Invalid email or password".to_string() },
             ));
         }
 
@@ -296,18 +291,15 @@ impl User for SeniorUser {
                 .map_err(|err| {
                     (
                         StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(ErrorResponse {
+                        ErrorResponse {
                             status: "error",
                             message: format!("Database error: {}", err),
-                        }),
+                        },
                     )
                 })?
                 .ok_or((
                     StatusCode::BAD_REQUEST,
-                    Json(ErrorResponse {
-                        status: "fail",
-                        message: "Invalid senior user id".to_string(),
-                    }),
+                    ErrorResponse { status: "fail", message: "Invalid senior user id".to_string() },
                 ));
 
         user_data
@@ -318,9 +310,10 @@ impl User for SeniorUser {
             .execute(pool)
             .await
             .map_err(|err| {
-                let error_response =
-                    ErrorResponse { status: "error", message: format!("Database error: {}", err) };
-                (StatusCode::INTERNAL_SERVER_ERROR, Json(error_response))
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    ErrorResponse { status: "error", message: format!("Database error: {}", err) },
+                )
             })?;
 
         Ok(&self)

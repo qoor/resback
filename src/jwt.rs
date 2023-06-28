@@ -77,7 +77,7 @@ pub fn generate_jwt_token(
     expires_in: Duration,
     user_type: UserType,
     user_id: UserId,
-) -> axum::response::Result<TokenData, Json<ErrorResponse>> {
+) -> Result<TokenData> {
     let claims = Claims {
         iss: "https://respec.team/api".to_string(),
         iat: Utc::now().timestamp(),
@@ -93,7 +93,10 @@ pub fn generate_jwt_token(
     )
     .map(|token| Ok(TokenData { claims, encoded_token: token }))
     .map_err(|_| {
-        Json(ErrorResponse { status: "fail", message: "Failed to generate token".to_string() })
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            ErrorResponse { status: "fail", message: "Failed to generate token".to_string() },
+        )
     })?
 }
 
@@ -139,28 +142,33 @@ async fn authorize_user(
     };
 
     let access_token = access_token.ok_or_else(|| {
-        let error_response = ErrorResponse {
-            status: "fail",
-            message: "You are not logged in. Please provide token".to_string(),
-        };
-        (StatusCode::UNAUTHORIZED, Json(error_response))
+        (
+            StatusCode::UNAUTHORIZED,
+            ErrorResponse {
+                status: "fail",
+                message: "You are not logged in. Please provide token".to_string(),
+            },
+        )
     })?;
 
     // Check if the access token has expired or invalid
     let claims = verify_token(data.config.public_key.decoding_key(), &access_token)
         .map_err(|_| {
-            let error_response = ErrorResponse {
-                status: "fail",
-                message: "Your token is invalid or session has expired".to_string(),
-            };
-            (StatusCode::UNAUTHORIZED, Json(error_response))
+            (
+                StatusCode::UNAUTHORIZED,
+                ErrorResponse {
+                    status: "fail",
+                    message: "Your token is invalid or session has expired".to_string(),
+                },
+            )
         })
         .map(|token| token.claims)?;
 
     let user_type = claims.nonce.parse::<UserType>().map_err(|_| {
-        let error_response =
-            ErrorResponse { status: "fail", message: "Unknown user type".to_string() };
-        (StatusCode::UNAUTHORIZED, Json(error_response))
+        (
+            StatusCode::UNAUTHORIZED,
+            ErrorResponse { status: "fail", message: "Unknown user type".to_string() },
+        )
     })?;
 
     Ok((user_type, claims.sub().parse::<UserId>().unwrap()))
