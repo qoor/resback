@@ -11,8 +11,8 @@ pub const ANIMALS: &[&str] = &include!("animals.in");
 /// List of characters in Korean
 pub const CHARACTERS: &[&str] = &include!("characters.in");
 
-/// List of heros in Korean
-pub const HEROS: &[&str] = &include!("heros.in");
+/// List of heroes in Korean
+pub const HEROES: &[&str] = &include!("heroes.in");
 
 /// List of monsters in Korean
 pub const MONSTERS: &[&str] = &include!("monsters.in");
@@ -113,7 +113,7 @@ impl<'a> KoreanName<'a> for names::Generator<'a> {
         match noun_type {
             NounType::Animal => names::Generator::new(ADJECTIVES, ANIMALS, naming),
             NounType::Character => names::Generator::new(ADJECTIVES, CHARACTERS, naming),
-            NounType::Hero => names::Generator::new(ADJECTIVES, HEROS, names::Name::Plain),
+            NounType::Hero => names::Generator::new(ADJECTIVES, HEROES, names::Name::Plain),
             NounType::Monster => names::Generator::new(ADJECTIVES, MONSTERS, names::Name::Plain),
         }
     }
