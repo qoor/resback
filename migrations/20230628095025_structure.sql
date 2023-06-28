@@ -1,3 +1,5 @@
+-- Add migration script here
+--
 -- MariaDB dump 10.19-11.0.2-MariaDB, for osx10.18 (arm64)
 --
 -- Host: localhost    Database: resback
