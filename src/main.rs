@@ -69,7 +69,7 @@ async fn main() {
         "/protected",
         get(handler::root::protected).route_layer(axum::middleware::from_fn_with_state(
             app_state.clone(),
-            jwt::authorize_normal_user,
+            jwt::authorize_user,
         )),
     );
     let auth_routers = Router::new()

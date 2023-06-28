@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     error::ErrorResponse,
-    user::account::{NormalUser, User, UserId, UserType},
+    user::account::{NormalUser, SeniorUser, User, UserId, UserType},
     AppState, Result,
 };
 
@@ -100,7 +100,7 @@ pub fn generate_jwt_token(
     })?
 }
 
-pub async fn authorize_normal_user<B>(
+pub async fn authorize_user<B>(
     cookies: CookieJar,
     State(data): State<Arc<AppState>>,
     req: Request<B>,
@@ -128,9 +128,11 @@ pub async fn authorize_normal_user<B>(
     // Include the account data to extensions
     match user_type {
         UserType::NormalUser => {
-            req.extensions_mut().insert(NormalUser::from_id(user_id, &data.database).await?)
+            req.extensions_mut().insert(NormalUser::from_id(user_id, &data.database).await?);
         }
-        UserType::SeniorUser => unimplemented!(),
+        UserType::SeniorUser => {
+            req.extensions_mut().insert(SeniorUser::from_id(user_id, &data.database).await?);
+        }
     };
 
     // Execute the next middleware
