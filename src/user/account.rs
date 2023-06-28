@@ -3,7 +3,7 @@
 use std::str::FromStr;
 
 use argon2::{password_hash::SaltString, Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
-use axum::{async_trait, http::StatusCode, Json};
+use axum::{async_trait, http::StatusCode};
 use rand::rngs::OsRng;
 use serde::{Deserialize, Serialize};
 use sqlx::{

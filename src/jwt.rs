@@ -8,7 +8,7 @@ use axum::{
     http::{request, Request, StatusCode},
     middleware::Next,
     response::IntoResponse,
-    Json, RequestPartsExt, TypedHeader,
+    RequestPartsExt, TypedHeader,
 };
 use axum_extra::extract::CookieJar;
 use chrono::{Duration, Utc};
