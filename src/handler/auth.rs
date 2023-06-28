@@ -9,6 +9,7 @@ use axum::{
     Json,
 };
 use axum_extra::extract::{cookie::Cookie, CookieJar};
+use axum_typed_multipart::TypedMultipart;
 use oauth2::{
     reqwest::async_http_client, AuthorizationCode, CsrfToken, ErrorResponse, RevocableToken, Scope,
     TokenIntrospectionResponse, TokenResponse, TokenType,
@@ -20,7 +21,8 @@ use crate::{
     error,
     jwt::{generate_jwt_token, verify_token},
     oauth::OAuthProvider,
-    user::account::UserId,
+    schema::SeniorLoginSchema,
+    user::account::{SeniorUser, UserId},
     AppState,
 };
 use crate::{
@@ -106,7 +108,7 @@ pub async fn auth_provider_authorized(
     Path(provider): Path<OAuthProvider>,
     Query(query): Query<AuthRequest>,
     State(data): State<Arc<AppState>>,
-) -> axum::response::Result<impl IntoResponse> {
+) -> crate::Result<impl IntoResponse> {
     let oauth_id: String;
 
     match provider {
@@ -149,41 +151,17 @@ pub async fn auth_provider_authorized(
         }
     };
 
-    let access_token = generate_jwt_token(
-        data.config.private_key.encoding_key(),
-        chrono::Duration::seconds(data.config.access_token_max_age),
-        UserType::NormalUser,
-        user.id(),
-    )
-    .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err))?;
-    let refresh_token = generate_jwt_token(
-        data.config.private_key.encoding_key(),
-        chrono::Duration::seconds(data.config.refresh_token_max_age),
-        UserType::NormalUser,
-        user.id(),
-    )
-    .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err))?;
+    add_token_pair_to_cookie_jar(&user, UserType::NormalUser, cookie_jar, &data).await
+}
 
-    user.update_refresh_token(refresh_token.encoded_token(), &data.database).await?;
+pub async fn auth_senior(
+    cookie_jar: CookieJar,
+    State(data): State<Arc<AppState>>,
+    TypedMultipart(login_data): TypedMultipart<SeniorLoginSchema>,
+) -> crate::Result<impl IntoResponse> {
+    let user = SeniorUser::login(&login_data.email, &login_data.password, &data.database).await?;
 
-    Ok((
-        cookie_jar
-            .add(
-                Cookie::build(ACCESS_TOKEN_COOKIE, access_token.encoded_token().to_string())
-                    .path("/")
-                    .http_only(true)
-                    .max_age(time::Duration::seconds(access_token.claims().expires_in()))
-                    .finish(),
-            )
-            .add(
-                Cookie::build(REFRESH_TOKEN_COOKIE, refresh_token.encoded_token().to_string())
-                    .path("/")
-                    .http_only(true)
-                    .max_age(time::Duration::seconds(refresh_token.claims().expires_in()))
-                    .finish(),
-            ),
-        Json(serde_json::json!({ "id": user.id() })),
-    ))
+    add_token_pair_to_cookie_jar(&user, UserType::SeniorUser, cookie_jar, &data).await
 }
 
 pub async fn auth_refresh(
@@ -221,19 +199,18 @@ pub async fn auth_refresh(
     let user_token = match user_type {
         UserType::NormalUser => {
             let user = NormalUser::from_id(user_id, &data.database).await?;
-
-            user.refresh_token()
-                .ok_or((
-                    StatusCode::UNAUTHORIZED,
-                    Json(error::ErrorResponse {
-                        status: "fail",
-                        message: "You are not logged in".to_string(),
-                    }),
-                ))?
-                .to_string()
+            user.refresh_token().map(str::to_string)
         }
-        UserType::SeniorUser => unimplemented!(),
+        UserType::SeniorUser => {
+            let user = SeniorUser::from_id(user_id, &data.database).await?;
+            user.refresh_token().map(str::to_string)
+        }
     };
+
+    let user_token = user_token.ok_or((
+        StatusCode::UNAUTHORIZED,
+        Json(error::ErrorResponse { status: "fail", message: "You are not logged in".to_string() }),
+    ))?;
 
     if refresh_token != user_token {
         return Err((
@@ -245,32 +222,7 @@ pub async fn auth_refresh(
         ));
     }
 
-    let access_token = generate_jwt_token(
-        &data.config.private_key.encoding_key(),
-        chrono::Duration::seconds(data.config.access_token_max_age),
-        user_type,
-        user_id,
-    )
-    .map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(error::ErrorResponse {
-                status: "error",
-                message: "Failed to generate access token".to_string(),
-            }),
-        )
-    })?;
-
-    Ok((
-        cookie_jar.add(
-            Cookie::build(ACCESS_TOKEN_COOKIE, access_token.encoded_token().to_string())
-                .path("/")
-                .http_only(true)
-                .max_age(time::Duration::seconds(access_token.claims().expires_in()))
-                .finish(),
-        ),
-        StatusCode::OK,
-    ))
+    add_access_token_to_cookie_jar(user_id, user_type, cookie_jar, &data).await
 }
 
 async fn get_oauth_user_data<U, TE, TR, TT, TIR, RT, TRE>(
@@ -307,4 +259,64 @@ where
         .unwrap();
 
     user_data
+}
+
+async fn add_access_token_to_cookie_jar(
+    user_id: UserId,
+    user_type: UserType,
+    cookie_jar: CookieJar,
+    data: &AppState,
+) -> crate::Result<(CookieJar, Json<serde_json::Value>)> {
+    let access_token = generate_jwt_token(
+        data.config.private_key.encoding_key(),
+        chrono::Duration::seconds(data.config.access_token_max_age),
+        user_type,
+        user_id,
+    )
+    .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err))?;
+
+    Ok((
+        cookie_jar.add(
+            Cookie::build(ACCESS_TOKEN_COOKIE, access_token.encoded_token().to_string())
+                .path("/")
+                .http_only(true)
+                .max_age(time::Duration::seconds(access_token.claims().expires_in()))
+                .finish(),
+        ),
+        Json(serde_json::json!({ "id": user_id })),
+    ))
+}
+
+async fn add_token_pair_to_cookie_jar<U>(
+    user: &U,
+    user_type: UserType,
+    cookie_jar: CookieJar,
+    data: &AppState,
+) -> crate::Result<impl IntoResponse>
+where
+    U: User,
+{
+    let (cookie_jar, _response) =
+        add_access_token_to_cookie_jar(user.id(), user_type, cookie_jar, data).await?;
+
+    let refresh_token = generate_jwt_token(
+        data.config.private_key.encoding_key(),
+        chrono::Duration::seconds(data.config.refresh_token_max_age),
+        user_type,
+        user.id(),
+    )
+    .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err))?;
+
+    user.update_refresh_token(refresh_token.encoded_token(), &data.database).await?;
+
+    Ok((
+        cookie_jar.add(
+            Cookie::build(REFRESH_TOKEN_COOKIE, refresh_token.encoded_token().to_string())
+                .path("/")
+                .http_only(true)
+                .max_age(time::Duration::seconds(refresh_token.claims().expires_in()))
+                .finish(),
+        ),
+        Json(serde_json::json!({ "id": user.id() })),
+    ))
 }

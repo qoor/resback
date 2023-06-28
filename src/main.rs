@@ -15,7 +15,7 @@ pub use error::Result;
 use std::sync::Arc;
 
 use axum::{
-    routing::{get, patch},
+    routing::{get, patch, post},
     Router, Server,
 };
 use config::Config;
@@ -77,9 +77,15 @@ async fn main() {
         .route("/auth/kakao", get(handler::auth::auth_kakao))
         .route("/auth/naver", get(handler::auth::auth_naver))
         .route("/auth/:provider/authorized", get(handler::auth::auth_provider_authorized))
+        .route("/auth/senior", post(handler::auth::auth_senior))
         .route("/auth/refresh", patch(handler::auth::auth_refresh));
+    let users_routers = Router::new().route("/users/senior", post(handler::users::register_senior));
 
-    let app = Router::new().merge(root_routers).merge(auth_routers).with_state(app_state);
+    let app = Router::new()
+        .merge(root_routers)
+        .merge(auth_routers)
+        .merge(users_routers)
+        .with_state(app_state);
 
     print_server_started(&config.address);
     Server::bind(&config.address.parse().unwrap()).serve(app.into_make_service()).await.unwrap();
