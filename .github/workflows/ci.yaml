@@ -12,6 +12,18 @@ jobs:
   check:
     name: Check
     runs-on: ubuntu-22.04
+
+    services:
+      mariadb:
+        image: mariadb
+        ports:
+          - 3306:3306
+        env:
+          MARIADB_USER: resback
+          MARIADB_PASSWORD: kEH8A6SipKz0mFRCZ3MPjwOp1F4kfMw
+          MARIADB_DATABASE: resback
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
@@ -21,13 +33,29 @@ jobs:
         with:
           toolchain: stable
 
+      - name: Caching cargo
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo
+
+      - name: Setup database
+        run: |
+          cargo install --locked sqlx-cli --features mysql || true
+          sqlx db setup
+
       - name: Run cargo check
         uses: actions-rs/cargo@v1
         with:
           command: check
 
   test:
-    name: Test Suite 
+    name: Test Suite
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout sources
@@ -37,6 +65,22 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+
+      - name: Caching cargo
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo
+
+      - name: Setup database
+        run: |
+          cargo install --locked sqlx-cli --features mysql || true
+          sqlx db setup
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1
