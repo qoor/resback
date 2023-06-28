@@ -36,7 +36,7 @@ pub struct NormalUser {
     updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum UserType {
     NormalUser,
     SeniorUser,
