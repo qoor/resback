@@ -1,0 +1,130 @@
+# This file was generated using a Jinja2 template.
+# Please make your changes in `Dockerfile.j2` and then `make` the individual Dockerfiles.
+
+{% set rust_version = "slim" %}
+{% set debian_version = "bullseye" %}
+{% set build_stage_base_image = "rust:%s-%s" % (rust_version, debian_version) %}
+{% if "amd64" in target_file %}
+{%   set runtime_stage_base_image = "debian:%s-slim" % debian_version %}
+{% elif "arm64" in target_file %}
+{%   set runtime_stage_base_image = "--platform=${TARGETARCH} debian:%s" % debian_version %}
+{%   set package_arch_name = "arm64" %}
+{%   set package_arch_target = "aarch64-unknown-linux-gnu" %}
+{%   set package_cross_compiler = "aarch64-linux-gnu" %}
+{% endif %}
+{% if package_arch_name is defined %}
+{%   set package_arch_prefix = ":" + package_arch_name %}
+{% else %}
+{%   set package_arch_prefix = "" %}
+{% endif %}
+{% if package_arch_target is defined %}
+{%   set package_arch_target_param = " --target=" + package_arch_target %}
+{% else %}
+{%   set package_arch_target_param = "" %}
+{% endif %}
+{% set mount_rust_cache = "--mount=type=cache,target=/root/.cargo/git --mount=type=cache,target=/root/.cargo/registry " %}
+
+# Using multistage build:
+# 	https://docs.docker.com/develop/develop-images/multistage-build/
+# 	https://whitfin.io/speeding-up-rust-docker-builds/
+
+########################## BUILD IMAGE  ##########################
+FROM {{ build_stage_base_image }} as build
+
+# Build time options to avoid dpkg warnings and help with reproducible builds.
+ENV DEBIAN_FRONTEND=noninteractive \
+    LANG=C.UTF-8 \
+    TZ=UTC \
+    TERM=xterm-256color \
+    CARGO_HOME="/root/.cargo" \
+    USER="root"
+
+# Create CARGO_HOME folder and don't download rust docs
+RUN {{ mount_rust_cache -}} mkdir -pv "${CARGO_HOME}" \
+    && rustup set profile minimal
+
+{% if "arm" in target_file %}
+# Install build dependencies for the {{ package_arch_name }} architecture
+RUN dpkg --add-architecture {{ package_arch_name }} \
+    && apt update \
+    && apt install -y \
+        --no-install-recommends \
+        gcc-{{ package_cross_compiler }} \
+        libc6-dev{{ package_arch_prefix }} \
+        libssl-dev{{ package_arch_prefix }} \
+    #
+    # Make sure cargo has the right target config
+    && echo '[target.{{ package_arch_target }}]' >> "${CARGO_HOME}/config" \
+    && echo 'linker = "{{ package_cross_compiler }}-gcc"' >> "${CARGO_HOME}/config" \
+    && echo 'rustflags = ["-L/usr/lib/{{ package_cross_compiler }}"]' >> "${CARGO_HOME}/config"
+
+# Set arm specific environment values
+ENV CC_{{ package_arch_target | replace("-", "_") }}="/usr/bin/{{ package_cross_compiler }}-gcc" \
+    CROSS_COMPILE="1" \
+    OPENSSL_INCLUDE_DIR="/usr/include/{{ package_cross_compiler }}" \
+    OPENSSL_LIB_DIR="/usr/lib/{{ package_cross_compiler }}"
+{% elif "amd64" in target_file %}
+# Install build dependencies
+RUN apt update \
+    && apt install -y \
+        --no-install-recommends \
+        libssl-dev
+{% endif %}
+
+# Creates a dummy project used to grab dependencies
+RUN USER=root cargo new --bin /app
+WORKDIR /app
+
+# Copies over *only* your manifests and build files
+COPY ./Cargo.* ./
+
+{% if package_arch_target is defined %}
+RUN {{ mount_rust_cache -}} rustup target add {{ package_arch_target }}
+{% endif %}
+
+# Builds your dependencies and removes the
+# dummy project, except the target folder
+# This folder contains the compiled dependencies
+RUN {{ mount_rust_cache -}} cargo build --release{{ package_arch_target_param }} \
+    && find ./ -not -path "./target*" -delete
+
+# Copies the complete project
+# To avoid copying unneeded files, use .dockerignore
+COPY ./ ./
+
+# Make sure that we actually build the project
+RUN touch src/main.rs
+
+# Builds again, this time it'll just be
+# your actual source files being built
+RUN {{ mount_rust_cache -}} cargo build --release{{ package_arch_target_param }}
+
+######################## RUNTIME IMAGE  ########################
+# Create a new stage with a minimal image
+# because we already have a binary built
+FROM {{ runtime_stage_base_image }}
+
+RUN apt update && apt install -y \
+    --no-install-recommends \
+    libssl1.1 \
+    && apt clean \
+    && rm -rf /var/lib/apt/lists/*
+
+
+RUN mkdir -p /app/
+WORKDIR /app/
+
+# Copies the files from the context (Rocket.toml file and web-vault)
+# and the binary from the "build" stage to the current stage
+{% if package_arch_target is defined %}
+COPY --from=build /app/target/{{ package_arch_target }}/release/resback ./
+{% else %}
+COPY --from=build /app/target/release/resback ./
+{% endif %}
+COPY --from=build /app/.env ./
+COPY --from=build /app/private_key.pem ./
+COPY --from=build /app/public_key.pem ./
+
+EXPOSE 3000
+
+CMD ["./resback"]
