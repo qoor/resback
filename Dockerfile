@@ -39,8 +39,9 @@ RUN apt update \
     && echo 'linker = "aarch64-linux-gnu-gcc"' >> "${CARGO_HOME}/config" \
     && echo 'rustflags = ["-L/usr/lib/aarch64-linux-gnu"]' >> "${CARGO_HOME}/config"
 
-RUN --mount=type=cache,target=/root/.cargo/git --mount=type=cache,target=/root/.cargo/registry rustup target add \
-    x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu
+RUN rustup target add \
+    x86_64-unknown-linux-gnu \
+    aarch64-unknown-linux-gnu
 
 # Set platform specific environment values
 ENV CC_x86_64_unknown_linux_gnu="/usr/bin/x86_64-linux-gnu-gcc" \
@@ -68,7 +69,7 @@ FROM --platform=${BUILDPLATFORM} builder as builder-amd64
 # Builds your dependencies and removes the dummy project,
 # except the target folder
 # This folder contains the compiled dependencies
-RUN --mount=type=cache,target=/root/.cargo/git --mount=type=cache,target=/root/.cargo/registry cargo build --release --target=x86_64-unknown-linux-gnu \
+RUN --mount=type=cache,id=amd64,target=/root/.cargo/git --mount=type=cache,id=amd64,target=/root/.cargo/registry cargo build --release --target=x86_64-unknown-linux-gnu \
     && find . -not -path "./target*" -delete
 
 # Copies the complete project
@@ -80,7 +81,7 @@ RUN touch src/main.rs
 
 # Builds again, this time it'll just be
 # your actual source files being built
-RUN --mount=type=cache,target=/root/.cargo/git --mount=type=cache,target=/root/.cargo/registry cargo build --release --target=x86_64-unknown-linux-gnu
+RUN --mount=type=cache,id=amd64,target=/root/.cargo/git --mount=type=cache,id=amd64,target=/root/.cargo/registry cargo build --release --target=x86_64-unknown-linux-gnu
 
 
 #
@@ -91,7 +92,7 @@ FROM --platform=${BUILDPLATFORM} builder as builder-arm64
 # Builds your dependencies and removes the
 # dummy project, except the target folder
 # This folder contains the compiled dependencies
-RUN --mount=type=cache,target=/root/.cargo/git --mount=type=cache,target=/root/.cargo/registry cargo build --release --target=aarch64-unknown-linux-gnu \
+RUN --mount=type=cache,id=arm64,target=/root/.cargo/git --mount=type=cache,id=arm64,target=/root/.cargo/registry cargo build --release --target=aarch64-unknown-linux-gnu \
     && find . -not -path "./target*" -delete
 
 # Copies the complete project
@@ -103,7 +104,7 @@ RUN touch src/main.rs
 
 # Builds again, this time it'll just be
 # your actual source files being built
-RUN --mount=type=cache,target=/root/.cargo/git --mount=type=cache,target=/root/.cargo/registry cargo build --release --target=aarch64-unknown-linux-gnu
+RUN --mount=type=cache,id=arm64,target=/root/.cargo/git --mount=type=cache,id=arm64,target=/root/.cargo/registry cargo build --release --target=aarch64-unknown-linux-gnu
 
 
 #
