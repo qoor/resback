@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-
-architectures=(
-  amd64
-  arm64
-)
-export architectures
