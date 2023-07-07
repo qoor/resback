@@ -6,6 +6,7 @@ on:
     branches: [main]
     types:
       - completed
+  workflow_dispatch:    
 
 env:
   CARGO_TERM_COLOR: always
@@ -84,5 +85,5 @@ jobs:
           script: |
             cd ${{ secrets.SSH_WORKING_DIR }}
             docker compose pull ${{ env.REPOSITORY }}
-            docker compose down
-            docker compose up -d
+            docker compose down || true
+            docker compose up -d || true
