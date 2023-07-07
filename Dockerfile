@@ -1,7 +1,7 @@
 # Generic Rust builder for multiple architectures.
 #
 # This provides a build environment for building Rust codes.
-# All flows in this image shoud be generic.
+# All flows in this image should be generic.
 # You cannot define architecture dependent behaviors.
 FROM --platform=${BUILDPLATFORM} rust:slim-bullseye as builder
 
