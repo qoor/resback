@@ -16,8 +16,8 @@ RUN mkdir -pv "${CARGO_HOME}" \
     && rustup set profile minimal
 
 # Install required dependencies
-RUN apt update \
-    && apt install -y \
+RUN apt-get update \
+    && apt-get install -y \
     # These should always on top.
     # After adding the amd64 architecture, the arm64 version of `apt` gives
     # package dependency errors when installing packages for cross compilation.
@@ -27,7 +27,7 @@ RUN apt update \
     && dpkg --add-architecture amd64 \
     && dpkg --add-architecture arm64 \
     # Install the openssl library with headers
-    && apt update && apt install -y \
+    && apt-get update && apt-get install -y \
     libssl-dev:amd64 libssl-dev:arm64 \
     #
     # Make sure cargo has the right target config
@@ -139,6 +139,16 @@ COPY --from=builder-arm64 /usr/src/resback/public_key.pem ./public_key.pem
 # Must be built via docker buildx.
 #
 FROM runtime-${TARGETARCH}
+
+# Install required dependencies
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    openssl \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 ENV PORT=3000 \
     MYSQL_HOST=localhost \
     MYSQL_PORT=3306 \
