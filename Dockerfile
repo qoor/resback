@@ -139,4 +139,14 @@ COPY --from=builder-arm64 /usr/src/resback/public_key.pem ./public_key.pem
 # Must be built via docker buildx.
 #
 FROM runtime-${TARGETARCH}
+ENV PORT=3000 \
+    MYSQL_HOST=localhost \
+    MYSQL_PORT=3306 \
+    MYSQL_USERNAME=resback \
+    MYSQL_PASSWORD= \
+    MYSQL_DATABASE=resback \
+    RSA_PRIVATE_PEM_FILE_PATH=private_key.pem \
+    RSA_PUBLIC_PEM_FILE_PATH=public_key.pem \
+    ACCESS_TOKEN_MAX_AGE=1800 \
+    REFRESH_TOKEN_MAX_AGE=31536000
 CMD [ "./resback" ]
