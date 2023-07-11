@@ -57,6 +57,12 @@ async fn main() {
         }
     };
 
+    let migration = sqlx::migrate!().run(&pool).await;
+    if let Err(err) = migration {
+        println!("Failed to migrate database: {:?}", err);
+        std::process::exit(1);
+    }
+
     let app_state = Arc::new(AppState {
         database: pool.clone(),
         config: config.clone(),
