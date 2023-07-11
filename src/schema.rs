@@ -4,6 +4,11 @@ use axum_typed_multipart::TryFromMultipart;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone, TryFromMultipart)]
+pub struct NormalLoginSchema {
+    pub code: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, TryFromMultipart)]
 pub struct SeniorRegisterSchema {
     pub email: String,
     pub password: String,

@@ -3,15 +3,15 @@
 use std::sync::Arc;
 
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Path, State},
     http::StatusCode,
-    response::{IntoResponse, Redirect},
+    response::IntoResponse,
     Json,
 };
 use axum_extra::extract::{cookie::Cookie, CookieJar};
 use axum_typed_multipart::TypedMultipart;
 use oauth2::{
-    reqwest::async_http_client, AuthorizationCode, CsrfToken, ErrorResponse, RevocableToken, Scope,
+    reqwest::async_http_client, AuthorizationCode, ErrorResponse, RevocableToken,
     TokenIntrospectionResponse, TokenResponse, TokenType,
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -21,7 +21,7 @@ use crate::{
     error,
     jwt::{generate_jwt_token, get_user_info_from_token},
     oauth::OAuthProvider,
-    schema::SeniorLoginSchema,
+    schema::{NormalLoginSchema, SeniorLoginSchema},
     user::account::{SeniorUser, UserId},
     AppState,
 };
@@ -80,35 +80,12 @@ struct NaverUser {
     // mobile: String,
 }
 
-pub async fn auth_google(State(data): State<Arc<AppState>>) -> impl IntoResponse {
-    let (auth_url, _csrf_token) = data
-        .google_oauth
-        .authorize_url(CsrfToken::new_random)
-        .add_scope(Scope::new("https://www.googleapis.com/auth/userinfo.email".to_string()))
-        .add_scope(Scope::new("https://www.googleapis.com/auth/userinfo.profile".to_string()))
-        .url();
-
-    Redirect::to(auth_url.as_ref())
-}
-
-pub async fn auth_kakao(State(data): State<Arc<AppState>>) -> impl IntoResponse {
-    let (auth_url, _csrf_token) = data.kakao_oauth.authorize_url(CsrfToken::new_random).url();
-
-    Redirect::to(auth_url.as_ref())
-}
-
-pub async fn auth_naver(State(data): State<Arc<AppState>>) -> impl IntoResponse {
-    let (auth_url, _csrf_token) = data.naver_oauth.authorize_url(CsrfToken::new_random).url();
-
-    Redirect::to(auth_url.as_ref())
-}
-
-pub async fn auth_provider_authorized(
+pub async fn auth_provider(
     cookie_jar: CookieJar,
     Path(provider): Path<OAuthProvider>,
-    Query(query): Query<AuthRequest>,
     State(data): State<Arc<AppState>>,
-) -> crate::Result<impl IntoResponse> {
+    TypedMultipart(login_data): TypedMultipart<NormalLoginSchema>,
+) -> impl IntoResponse {
     let oauth_id: String;
 
     match provider {
@@ -116,7 +93,7 @@ pub async fn auth_provider_authorized(
             let google_user: GoogleUser = get_oauth_user_data(
                 &data.google_oauth,
                 &data.config.google_oauth.user_data_uri,
-                &query.code,
+                &login_data.code,
             )
             .await;
 
@@ -126,7 +103,7 @@ pub async fn auth_provider_authorized(
             let kakao_user: KakaoUser = get_oauth_user_data(
                 &data.kakao_oauth,
                 &data.config.kakao_oauth.user_data_uri,
-                &query.code,
+                &login_data.code,
             )
             .await;
             oauth_id = kakao_user.id.to_string();
@@ -135,7 +112,7 @@ pub async fn auth_provider_authorized(
             let naver_user_response: NaverUserResponse = get_oauth_user_data(
                 &data.naver_oauth,
                 &data.config.naver_oauth.user_data_uri,
-                &query.code,
+                &login_data.code,
             )
             .await;
             oauth_id = naver_user_response.response.id;

@@ -73,10 +73,7 @@ async fn main() {
         )),
     );
     let auth_routers = Router::new()
-        .route("/auth/google", get(handler::auth::auth_google))
-        .route("/auth/kakao", get(handler::auth::auth_kakao))
-        .route("/auth/naver", get(handler::auth::auth_naver))
-        .route("/auth/:provider/authorized", get(handler::auth::auth_provider_authorized))
+        .route("/auth/:provider", post(handler::auth::auth_provider))
         .route("/auth/senior", post(handler::auth::auth_senior))
         .route("/auth/refresh", patch(handler::auth::auth_refresh));
     let users_routers = Router::new().route("/users/senior", post(handler::users::register_senior));
