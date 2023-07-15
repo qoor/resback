@@ -1,5 +1,25 @@
 {
   "db": "MySQL",
+  "119d3a376fe22cc3968898b0e4cecbc1ddc389eb3b69a441632ec216e1632b90": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 1
+      }
+    },
+    "query": "DELETE FROM senior_users WHERE id = ?"
+  },
+  "11c898f25ea905695690fb711e97b2cc6b15fa873b1a90fb0f897ce5ddc7eb29": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 1
+      }
+    },
+    "query": "DELETE FROM normal_users WHERE id = ?"
+  },
   "175389921ede55b668b205b3f3310179e37675872f06f805afdb44d65e9b42ba": {
     "describe": {
       "columns": [],

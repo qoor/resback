@@ -68,6 +68,8 @@ pub trait User: Sized {
     async fn from_id(id: UserId, pool: &sqlx::Pool<MySql>) -> Result<Self>;
 
     async fn update_refresh_token(&self, token: &str, pool: &sqlx::Pool<MySql>) -> Result<&Self>;
+
+    async fn delete(id: UserId, pool: &sqlx::Pool<MySql>) -> Result<UserId>;
 }
 
 impl NormalUser {
@@ -165,6 +167,26 @@ impl User for NormalUser {
             })?;
 
         Ok(&self)
+    }
+
+    async fn delete(id: UserId, pool: &sqlx::Pool<MySql>) -> Result<UserId> {
+        let result = sqlx::query!("DELETE FROM normal_users WHERE id = ?", id)
+            .execute(pool)
+            .await
+            .map_err(|err| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    ErrorResponse { status: "error", message: format!("Database Error: {}", err) },
+                )
+            })?;
+
+        match result.rows_affected() {
+            1.. => Ok(id),
+            _ => Err((
+                StatusCode::NOT_FOUND,
+                ErrorResponse { status: "fail", message: "Cannot find user".to_string() },
+            )),
+        }
     }
 }
 
@@ -326,5 +348,25 @@ impl User for SeniorUser {
             })?;
 
         Ok(&self)
+    }
+
+    async fn delete(id: UserId, pool: &sqlx::Pool<MySql>) -> Result<UserId> {
+        let result = sqlx::query!("DELETE FROM senior_users WHERE id = ?", id)
+            .execute(pool)
+            .await
+            .map_err(|err| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    ErrorResponse { status: "error", message: format!("Database Error: {}", err) },
+                )
+            })?;
+
+        match result.rows_affected() {
+            1.. => Ok(id),
+            _ => Err((
+                StatusCode::NOT_FOUND,
+                ErrorResponse { status: "fail", message: "Cannot find user".to_string() },
+            )),
+        }
     }
 }
