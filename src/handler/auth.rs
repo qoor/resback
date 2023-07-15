@@ -19,7 +19,7 @@ use sqlx::types::chrono::{DateTime, Utc};
 
 use crate::{
     error,
-    jwt::{generate_jwt_token, get_user_info_from_token},
+    jwt::{generate_jwt_token, get_user_info_from_token, verify_token},
     oauth::OAuthProvider,
     schema::{NormalLoginSchema, SeniorLoginSchema},
     user::account::{SeniorUser, UserId},
@@ -177,6 +177,42 @@ pub async fn auth_refresh(
     }
 
     add_access_token_to_cookie_jar(user_id, user_type, cookie_jar, &data).await
+}
+
+pub async fn logout_user(
+    cookie_jar: CookieJar,
+    State(data): State<Arc<AppState>>,
+) -> crate::Result<impl IntoResponse> {
+    let access_token = cookie_jar.get(ACCESS_TOKEN_COOKIE).ok_or((
+        StatusCode::INTERNAL_SERVER_ERROR,
+        (crate::error::ErrorResponse {
+            status: "error",
+            message: "Failed to get login information".to_string(),
+        }),
+    ))?;
+    let refresh_token = cookie_jar.get(REFRESH_TOKEN_COOKIE).ok_or((
+        StatusCode::INTERNAL_SERVER_ERROR,
+        (crate::error::ErrorResponse {
+            status: "error",
+            message: "Failed to get login information".to_string(),
+        }),
+    ))?;
+
+    let claims = verify_token(data.config.public_key.decoding_key(), &access_token.to_string())
+        .map(|token_data| token_data.claims)
+        .map_err(|_| {
+            (
+                StatusCode::UNAUTHORIZED,
+                crate::error::ErrorResponse {
+                    status: "fail",
+                    message: "Failed to verify user".to_string(),
+                },
+            )
+        })?;
+    Ok((
+        cookie_jar.clone().remove(access_token.clone()).remove(refresh_token.clone()),
+        Json(serde_json::json!({ "uid": claims.sub() })),
+    ))
 }
 
 async fn get_oauth_user_data<U, TE, TR, TT, TIR, RT, TRE>(

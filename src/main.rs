@@ -15,7 +15,8 @@ pub use error::Result;
 use std::sync::Arc;
 
 use axum::{
-    routing::{get, patch, post},
+    middleware,
+    routing::{delete, get, patch, post},
     Router, Server,
 };
 use config::Config;
@@ -73,15 +74,22 @@ async fn main() {
 
     let root_routers = Router::new().route("/", get(handler::root)).route(
         "/protected",
-        get(handler::root::protected).route_layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jwt::authorize_user,
-        )),
+        get(handler::root::protected)
+            .route_layer(middleware::from_fn_with_state(app_state.clone(), jwt::authorize_user)),
     );
     let auth_routers = Router::new()
         .route("/auth/:provider", post(handler::auth::auth_provider))
         .route("/auth/senior", post(handler::auth::auth_senior))
-        .route("/auth/refresh", patch(handler::auth::auth_refresh));
+        .route(
+            "/auth/token",
+            patch(handler::auth::auth_refresh)
+                .route_layer(middleware::from_fn_with_state(app_state.clone(), jwt::authorize_user))
+                .delete(handler::auth::logout_user)
+                .route_layer(middleware::from_fn_with_state(
+                    app_state.clone(),
+                    jwt::authorize_user,
+                )),
+        );
     let users_routers = Router::new().route("/users/senior", post(handler::users::register_senior));
 
     let app = Router::new()
