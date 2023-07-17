@@ -176,7 +176,11 @@ pub struct SeniorUser {
     name: String,
     phone: String,
     nickname: String,
-    career_file_url: String,
+    major: String,
+    experience_years: i32,
+    mentoring_price: i32,
+    representative_careers: String,
+    description: String,
     refresh_token: Option<String>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
@@ -215,12 +219,16 @@ impl SeniorUser {
         .map(|hash| hash.to_string())?;
 
         let user = sqlx::query!(
-            "INSERT INTO senior_users (email, password, name, phone, career_file_url) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO senior_users (email, password, name, phone, major, experience_years, mentoring_price, representative_careers, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             register_data.email,
             hashed_password,
             register_data.name,
             register_data.phone,
-            register_data.career_file_url
+            register_data.major,
+            register_data.experience_years,
+            register_data.mentoring_price,
+            register_data.representative_careers.join("|"),
+            register_data.description
         ).execute(pool).await.map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, ErrorResponse {
             status: "error",
             message: format!("Database error: {}", err)
