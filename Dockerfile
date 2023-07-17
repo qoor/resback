@@ -158,5 +158,9 @@ ENV PORT=3000 \
     RSA_PRIVATE_PEM_FILE_PATH=private_key.pem \
     RSA_PUBLIC_PEM_FILE_PATH=public_key.pem \
     ACCESS_TOKEN_MAX_AGE=1800 \
-    REFRESH_TOKEN_MAX_AGE=31536000
+    REFRESH_TOKEN_MAX_AGE=31536000 \
+    GOOGLE_REDIRECT_URI=http://localhost:3000/auth/google/authorized \
+    KAKAO_REDIRECT_URI=http://localhost:3000/auth/kakao/authorized \
+    NAVER_REDIRECT_URI=http://localhost:3000/auth/naver/authorized
+
 CMD [ "./resback" ]
