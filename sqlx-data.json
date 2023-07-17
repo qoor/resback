@@ -624,6 +624,16 @@
     },
     "query": "SELECT * FROM normal_users WHERE oauth_provider = ? AND oauth_id = ?"
   },
+  "c37a33dc5d69f3dccd6971f88f974f681591fbf8088cc3d983c4a0316ea52598": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 10
+      }
+    },
+    "query": "INSERT INTO senior_users (email, password, name, phone, nickname, major, experience_years, mentoring_price, representative_careers, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+  },
   "c9e6f4ed63741c0d2a0cc264f9ef9c3b920f59d65b5b90e06220df1d0f4cb800": {
     "describe": {
       "columns": [],
@@ -633,16 +643,6 @@
       }
     },
     "query": "INSERT INTO normal_users (oauth_provider, oauth_id, nickname) VALUES (?, ?, ?)"
-  },
-  "e2ae8d6f0d1c07a6891b61e6cba5b993d9f84b02564840da736bc4794b9fd55a": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Right": 9
-      }
-    },
-    "query": "INSERT INTO senior_users (email, password, name, phone, major, experience_years, mentoring_price, representative_careers, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
   },
   "fbba608a9f13a08e465b3f5c1de0892f303291e369d4495149171f47014603f5": {
     "describe": {
