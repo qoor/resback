@@ -46,8 +46,8 @@ struct GoogleUser {
     email: String,
     verified_email: bool,
     name: String,
-    given_name: String,
-    family_name: String,
+    given_name: Option<String>,
+    family_name: Option<String>,
     picture: String,
     locale: String,
 }
