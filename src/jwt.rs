@@ -113,7 +113,7 @@ pub async fn authorize_user<B>(
     // If the access token does not exists as cookie, try to find it in the
     // Authorization header in HTTP headers
     let access_token = match cookies.get(ACCESS_TOKEN_COOKIE) {
-        Some(access_token) => Some(access_token.to_string()),
+        Some(access_token) => Some(access_token.value().to_string()),
         None => parts
             .extract::<TypedHeader<Authorization<Bearer>>>()
             .await

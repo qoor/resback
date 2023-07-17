@@ -145,7 +145,7 @@ pub async fn auth_refresh(
     cookie_jar: CookieJar,
     State(data): State<Arc<AppState>>,
 ) -> crate::Result<impl IntoResponse> {
-    let refresh_token = cookie_jar.get(REFRESH_TOKEN_COOKIE).map(|token| token.to_string());
+    let refresh_token = cookie_jar.get(REFRESH_TOKEN_COOKIE).map(|token| token.value().to_string());
 
     let (user_type, user_id) = get_user_info_from_token(refresh_token.as_deref(), &data).await?;
     let refresh_token = refresh_token.unwrap();
