@@ -240,12 +240,14 @@ impl SeniorUser {
         })
         .map(|hash| hash.to_string())?;
 
+        let nickname = KoreanGenerator::new(nickname::Naming::Plain).next();
         let user = sqlx::query!(
-            "INSERT INTO senior_users (email, password, name, phone, major, experience_years, mentoring_price, representative_careers, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO senior_users (email, password, name, phone, nickname, major, experience_years, mentoring_price, representative_careers, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             register_data.email,
             hashed_password,
             register_data.name,
             register_data.phone,
+            nickname,
             register_data.major,
             register_data.experience_years,
             register_data.mentoring_price,
