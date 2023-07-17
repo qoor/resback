@@ -20,16 +20,6 @@
     },
     "query": "DELETE FROM normal_users WHERE id = ?"
   },
-  "175389921ede55b668b205b3f3310179e37675872f06f805afdb44d65e9b42ba": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Right": 5
-      }
-    },
-    "query": "INSERT INTO senior_users (email, password, name, phone, career_file_url) VALUES (?, ?, ?, ?, ?)"
-  },
   "25495bf25d3c8e56514a62fd98269ad83378092ce34b0453fcd2cd0750a2bfb9": {
     "describe": {
       "columns": [
@@ -209,8 +199,56 @@
           }
         },
         {
-          "name": "career_file_url",
+          "name": "major",
           "ordinal": 6,
+          "type_info": {
+            "char_set": 224,
+            "flags": {
+              "bits": 4097
+            },
+            "max_size": 128,
+            "type": "VarString"
+          }
+        },
+        {
+          "name": "experience_years",
+          "ordinal": 7,
+          "type_info": {
+            "char_set": 63,
+            "flags": {
+              "bits": 4097
+            },
+            "max_size": 10,
+            "type": "Long"
+          }
+        },
+        {
+          "name": "mentoring_price",
+          "ordinal": 8,
+          "type_info": {
+            "char_set": 63,
+            "flags": {
+              "bits": 4097
+            },
+            "max_size": 10,
+            "type": "Long"
+          }
+        },
+        {
+          "name": "representative_careers",
+          "ordinal": 9,
+          "type_info": {
+            "char_set": 224,
+            "flags": {
+              "bits": 4097
+            },
+            "max_size": 4096,
+            "type": "VarString"
+          }
+        },
+        {
+          "name": "description",
+          "ordinal": 10,
           "type_info": {
             "char_set": 224,
             "flags": {
@@ -222,7 +260,7 @@
         },
         {
           "name": "refresh_token",
-          "ordinal": 7,
+          "ordinal": 11,
           "type_info": {
             "char_set": 224,
             "flags": {
@@ -234,7 +272,7 @@
         },
         {
           "name": "created_at",
-          "ordinal": 8,
+          "ordinal": 12,
           "type_info": {
             "char_set": 63,
             "flags": {
@@ -246,7 +284,7 @@
         },
         {
           "name": "updated_at",
-          "ordinal": 9,
+          "ordinal": 13,
           "type_info": {
             "char_set": 63,
             "flags": {
@@ -258,6 +296,10 @@
         }
       ],
       "nullable": [
+        false,
+        false,
+        false,
+        false,
         false,
         false,
         false,
@@ -351,8 +393,56 @@
           }
         },
         {
-          "name": "career_file_url",
+          "name": "major",
           "ordinal": 6,
+          "type_info": {
+            "char_set": 224,
+            "flags": {
+              "bits": 4097
+            },
+            "max_size": 128,
+            "type": "VarString"
+          }
+        },
+        {
+          "name": "experience_years",
+          "ordinal": 7,
+          "type_info": {
+            "char_set": 63,
+            "flags": {
+              "bits": 4097
+            },
+            "max_size": 10,
+            "type": "Long"
+          }
+        },
+        {
+          "name": "mentoring_price",
+          "ordinal": 8,
+          "type_info": {
+            "char_set": 63,
+            "flags": {
+              "bits": 4097
+            },
+            "max_size": 10,
+            "type": "Long"
+          }
+        },
+        {
+          "name": "representative_careers",
+          "ordinal": 9,
+          "type_info": {
+            "char_set": 224,
+            "flags": {
+              "bits": 4097
+            },
+            "max_size": 4096,
+            "type": "VarString"
+          }
+        },
+        {
+          "name": "description",
+          "ordinal": 10,
           "type_info": {
             "char_set": 224,
             "flags": {
@@ -364,7 +454,7 @@
         },
         {
           "name": "refresh_token",
-          "ordinal": 7,
+          "ordinal": 11,
           "type_info": {
             "char_set": 224,
             "flags": {
@@ -376,7 +466,7 @@
         },
         {
           "name": "created_at",
-          "ordinal": 8,
+          "ordinal": 12,
           "type_info": {
             "char_set": 63,
             "flags": {
@@ -388,7 +478,7 @@
         },
         {
           "name": "updated_at",
-          "ordinal": 9,
+          "ordinal": 13,
           "type_info": {
             "char_set": 63,
             "flags": {
@@ -400,6 +490,10 @@
         }
       ],
       "nullable": [
+        false,
+        false,
+        false,
+        false,
         false,
         false,
         false,
@@ -539,6 +633,16 @@
       }
     },
     "query": "INSERT INTO normal_users (oauth_provider, oauth_id, nickname) VALUES (?, ?, ?)"
+  },
+  "e2ae8d6f0d1c07a6891b61e6cba5b993d9f84b02564840da736bc4794b9fd55a": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 9
+      }
+    },
+    "query": "INSERT INTO senior_users (email, password, name, phone, major, experience_years, mentoring_price, representative_careers, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
   },
   "fbba608a9f13a08e465b3f5c1de0892f303291e369d4495149171f47014603f5": {
     "describe": {

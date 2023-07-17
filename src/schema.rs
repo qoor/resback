@@ -14,7 +14,11 @@ pub struct SeniorRegisterSchema {
     pub password: String,
     pub name: String,
     pub phone: String,
-    pub career_file_url: String,
+    pub major: String,
+    pub experience_years: i32,
+    pub mentoring_price: i32,
+    pub representative_careers: Vec<String>,
+    pub description: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, TryFromMultipart)]
