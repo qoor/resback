@@ -26,3 +26,18 @@ pub struct SeniorLoginSchema {
     pub email: String,
     pub password: String,
 }
+
+#[derive(Debug, Serialize, Clone)]
+pub struct SeniorUserInfoSchema {
+    pub nickname: String,
+    pub major: String,
+    pub experience_years: i32,
+    pub mentoring_price: i32,
+    pub representative_careers: Vec<String>,
+    pub description: String,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct CategorySearchSchema {
+    pub seniors: Vec<SeniorUserInfoSchema>,
+}

@@ -1,16 +1,18 @@
 use std::sync::Arc;
 
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     response::IntoResponse,
     Json,
 };
 
 use axum_typed_multipart::TypedMultipart;
+use reqwest::StatusCode;
 
 use crate::{
-    schema::SeniorRegisterSchema,
-    user::account::{NormalUser, SeniorUser, User, UserId},
+    error::ErrorResponse,
+    schema::{CategorySearchSchema, SeniorRegisterSchema, SeniorUserInfoSchema},
+    user::account::{self, NormalUser, SeniorUser, User, UserId},
     AppState, Result,
 };
 
@@ -34,4 +36,13 @@ pub async fn delete_senior_user(
     State(data): State<Arc<AppState>>,
 ) -> crate::Result<impl IntoResponse> {
     SeniorUser::delete(id, &data.database).await.map(|id| Json(serde_json::json!({ "uid": id })))
+}
+
+pub async fn get_seniors_from_major(
+    Query(major): Query<String>,
+    State(data): State<Arc<AppState>>,
+) -> crate::Result<impl IntoResponse> {
+    Ok(Json(CategorySearchSchema {
+        seniors: account::get_seniors_from_major(&major, &data.database).await?,
+    }))
 }

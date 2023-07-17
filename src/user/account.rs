@@ -14,7 +14,7 @@ use sqlx::{
 use crate::{
     error::ErrorResponse,
     nickname::{self, KoreanGenerator},
-    schema::SeniorRegisterSchema,
+    schema::{SeniorRegisterSchema, SeniorUserInfoSchema},
 };
 use crate::{oauth::OAuthProvider, Result};
 
@@ -312,6 +312,10 @@ impl SeniorUser {
 
         Ok(user)
     }
+
+    pub fn email(&self) -> &str {
+        &self.email
+    }
 }
 
 #[async_trait]
@@ -379,4 +383,45 @@ impl User for SeniorUser {
             )),
         }
     }
+}
+
+impl Into<SeniorUserInfoSchema> for SeniorUser {
+    fn into(self) -> SeniorUserInfoSchema {
+        SeniorUserInfoSchema {
+            nickname: self.nickname,
+            major: self.major,
+            experience_years: self.experience_years,
+            mentoring_price: self.mentoring_price,
+            representative_careers: self
+                .representative_careers
+                .split('|')
+                .map(|s| s.to_string())
+                .collect(),
+            description: self.description,
+        }
+    }
+}
+
+pub async fn get_seniors_from_major(
+    major: &str,
+    pool: &sqlx::Pool<MySql>,
+) -> Result<Vec<SeniorUserInfoSchema>> {
+    let seniors: Vec<SeniorUserInfoSchema> =
+        sqlx::query_as_unchecked!(SeniorUser, "SELECT * FROM senior_users WHERE major = ?", major)
+            .fetch_all(pool)
+            .await
+            .map_err(|err| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    ErrorResponse {
+                        status: "error",
+                        message: format!("Database error: {:?}", err),
+                    },
+                )
+            })?
+            .into_iter()
+            .map(|senior| senior.into())
+            .collect();
+
+    Ok(seniors)
 }

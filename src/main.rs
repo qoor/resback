@@ -93,7 +93,8 @@ async fn main() {
     let users_routers = Router::new()
         .route("/users/senior", post(handler::users::register_senior_user))
         .route("/users/senior/:id", delete(handler::users::delete_senior_user))
-        .route("/users/normal/:id", delete(handler::users::delete_normal_user));
+        .route("/users/normal/:id", delete(handler::users::delete_normal_user))
+        .route("/users/senior/major", get(handler::users::get_seniors_from_major));
 
     let app = Router::new()
         .merge(root_routers)

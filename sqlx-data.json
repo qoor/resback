@@ -20,6 +20,200 @@
     },
     "query": "DELETE FROM normal_users WHERE id = ?"
   },
+  "24b3f7d03746a2ae40dcd4839869081040b6253e8f4ac16cfa6f84425c27b1dc": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": {
+            "char_set": 63,
+            "flags": {
+              "bits": 547
+            },
+            "max_size": 10,
+            "type": "Long"
+          }
+        },
+        {
+          "name": "email",
+          "ordinal": 1,
+          "type_info": {
+            "char_set": 224,
+            "flags": {
+              "bits": 4101
+            },
+            "max_size": 512,
+            "type": "VarString"
+          }
+        },
+        {
+          "name": "password",
+          "ordinal": 2,
+          "type_info": {
+            "char_set": 224,
+            "flags": {
+              "bits": 4097
+            },
+            "max_size": 512,
+            "type": "VarString"
+          }
+        },
+        {
+          "name": "name",
+          "ordinal": 3,
+          "type_info": {
+            "char_set": 224,
+            "flags": {
+              "bits": 4097
+            },
+            "max_size": 32,
+            "type": "VarString"
+          }
+        },
+        {
+          "name": "phone",
+          "ordinal": 4,
+          "type_info": {
+            "char_set": 224,
+            "flags": {
+              "bits": 4097
+            },
+            "max_size": 128,
+            "type": "VarString"
+          }
+        },
+        {
+          "name": "nickname",
+          "ordinal": 5,
+          "type_info": {
+            "char_set": 224,
+            "flags": {
+              "bits": 4097
+            },
+            "max_size": 128,
+            "type": "VarString"
+          }
+        },
+        {
+          "name": "major",
+          "ordinal": 6,
+          "type_info": {
+            "char_set": 224,
+            "flags": {
+              "bits": 4097
+            },
+            "max_size": 128,
+            "type": "VarString"
+          }
+        },
+        {
+          "name": "experience_years",
+          "ordinal": 7,
+          "type_info": {
+            "char_set": 63,
+            "flags": {
+              "bits": 4097
+            },
+            "max_size": 10,
+            "type": "Long"
+          }
+        },
+        {
+          "name": "mentoring_price",
+          "ordinal": 8,
+          "type_info": {
+            "char_set": 63,
+            "flags": {
+              "bits": 4097
+            },
+            "max_size": 10,
+            "type": "Long"
+          }
+        },
+        {
+          "name": "representative_careers",
+          "ordinal": 9,
+          "type_info": {
+            "char_set": 224,
+            "flags": {
+              "bits": 4097
+            },
+            "max_size": 4096,
+            "type": "VarString"
+          }
+        },
+        {
+          "name": "description",
+          "ordinal": 10,
+          "type_info": {
+            "char_set": 224,
+            "flags": {
+              "bits": 4097
+            },
+            "max_size": 8192,
+            "type": "VarString"
+          }
+        },
+        {
+          "name": "refresh_token",
+          "ordinal": 11,
+          "type_info": {
+            "char_set": 224,
+            "flags": {
+              "bits": 0
+            },
+            "max_size": 8192,
+            "type": "VarString"
+          }
+        },
+        {
+          "name": "created_at",
+          "ordinal": 12,
+          "type_info": {
+            "char_set": 63,
+            "flags": {
+              "bits": 1185
+            },
+            "max_size": 19,
+            "type": "Timestamp"
+          }
+        },
+        {
+          "name": "updated_at",
+          "ordinal": 13,
+          "type_info": {
+            "char_set": 63,
+            "flags": {
+              "bits": 9377
+            },
+            "max_size": 19,
+            "type": "Timestamp"
+          }
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false
+      ],
+      "parameters": {
+        "Right": 1
+      }
+    },
+    "query": "SELECT * FROM senior_users WHERE major = ?"
+  },
   "25495bf25d3c8e56514a62fd98269ad83378092ce34b0453fcd2cd0750a2bfb9": {
     "describe": {
       "columns": [
@@ -624,6 +818,16 @@
     },
     "query": "SELECT * FROM normal_users WHERE oauth_provider = ? AND oauth_id = ?"
   },
+  "c37a33dc5d69f3dccd6971f88f974f681591fbf8088cc3d983c4a0316ea52598": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 10
+      }
+    },
+    "query": "INSERT INTO senior_users (email, password, name, phone, nickname, major, experience_years, mentoring_price, representative_careers, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+  },
   "c9e6f4ed63741c0d2a0cc264f9ef9c3b920f59d65b5b90e06220df1d0f4cb800": {
     "describe": {
       "columns": [],
@@ -633,16 +837,6 @@
       }
     },
     "query": "INSERT INTO normal_users (oauth_provider, oauth_id, nickname) VALUES (?, ?, ?)"
-  },
-  "e2ae8d6f0d1c07a6891b61e6cba5b993d9f84b02564840da736bc4794b9fd55a": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Right": 9
-      }
-    },
-    "query": "INSERT INTO senior_users (email, password, name, phone, major, experience_years, mentoring_price, representative_careers, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
   },
   "fbba608a9f13a08e465b3f5c1de0892f303291e369d4495149171f47014603f5": {
     "describe": {
