@@ -23,6 +23,7 @@ use config::Config;
 use dotenvy::dotenv;
 use oauth::NonStandardClient;
 use sqlx::{mysql::MySqlPoolOptions, MySql};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 pub struct AppState {
     database: sqlx::Pool<MySql>,
@@ -38,6 +39,14 @@ pub struct AppState {
 
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "resback=debug".into()),
+        )
+        .with(tracing_subscriber::fmt::layer())
+        .init();
+
     // Load environment variables from '.env' file
     dotenv().ok();
 

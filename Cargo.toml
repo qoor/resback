@@ -30,6 +30,8 @@ serde_json = "1.0.97"
 sqlx = { version = "0.6.3", features = ["runtime-tokio-native-tls", "mysql", "chrono", "offline"] }
 time = "0.3.22"
 tokio = { version = "1.28.2", features = ["full"] }
+tracing = "0.1.37"
+tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 
 [dev-dependencies]
 tower = { version = "0.4.13", features = ["util"] }
