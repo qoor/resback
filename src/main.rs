@@ -72,11 +72,7 @@ async fn main() {
         naver_oauth: config.naver_oauth.to_non_standard_client(),
     });
 
-    let root_routers = Router::new().route("/", get(handler::root)).route(
-        "/protected",
-        get(handler::root::protected)
-            .route_layer(middleware::from_fn_with_state(app_state.clone(), jwt::authorize_user)),
-    );
+    let root_routers = Router::new().route("/", get(handler::root));
     let auth_routers = Router::new()
         .route("/auth/:provider", post(handler::auth::auth_provider))
         .route("/auth/senior", post(handler::auth::auth_senior))

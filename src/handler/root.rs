@@ -5,7 +5,3 @@ use crate::about;
 pub async fn root() -> String {
     about()
 }
-
-pub async fn protected() -> &'static str {
-    "Hello, World!"
-}
