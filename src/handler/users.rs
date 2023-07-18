@@ -11,7 +11,10 @@ use reqwest::StatusCode;
 
 use crate::{
     error::ErrorResponse,
-    schema::{CategorySearchSchema, SeniorRegisterSchema, SeniorUserInfoSchema},
+    schema::{
+        CategorySearchResultSchema, CategorySearchSchema, SeniorRegisterSchema,
+        SeniorUserInfoSchema,
+    },
     user::account::{self, NormalUser, SeniorUser, User, UserId},
     AppState, Result,
 };
@@ -39,10 +42,10 @@ pub async fn delete_senior_user(
 }
 
 pub async fn get_seniors_from_major(
-    Query(major): Query<String>,
+    Query(search_info): Query<CategorySearchSchema>,
     State(data): State<Arc<AppState>>,
 ) -> crate::Result<impl IntoResponse> {
-    Ok(Json(CategorySearchSchema {
-        seniors: account::get_seniors_from_major(&major, &data.database).await?,
+    Ok(Json(CategorySearchResultSchema {
+        seniors: account::get_seniors_from_major(&search_info.major, &data.database).await?,
     }))
 }

@@ -37,7 +37,12 @@ pub struct SeniorUserInfoSchema {
     pub description: String,
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct CategorySearchSchema {
+    pub major: String,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct CategorySearchResultSchema {
     pub seniors: Vec<SeniorUserInfoSchema>,
 }
