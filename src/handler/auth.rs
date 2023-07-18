@@ -14,13 +14,12 @@ use oauth2::{
     reqwest::async_http_client, AuthorizationCode, ErrorResponse, RevocableToken,
     TokenIntrospectionResponse, TokenResponse, TokenType,
 };
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use sqlx::types::chrono::{DateTime, Utc};
+use serde::{de::DeserializeOwned, Deserialize};
 
 use crate::{
     error,
     jwt::Token,
-    oauth::OAuthProvider,
+    oauth::{GoogleUser, KakaoUser, NaverUserResponse, OAuthProvider},
     schema::{NormalLoginSchema, SeniorLoginSchema},
     user::account::{SeniorUser, UserId},
     AppState,
@@ -38,46 +37,6 @@ use crate::{
 pub struct AuthRequest {
     code: String,
     state: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-struct GoogleUser {
-    id: String,
-    email: String,
-    verified_email: bool,
-    name: String,
-    given_name: Option<String>,
-    family_name: Option<String>,
-    picture: String,
-    locale: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-struct KakaoUser {
-    id: u64,
-    connected_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct NaverUserResponse {
-    #[serde(rename = "resultcode")]
-    result_code: String,
-    message: String,
-    response: NaverUser,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct NaverUser {
-    id: String,
-    // nickname: String,
-    // name: String,
-    // email: String,
-    // gender: String,
-    // age: String,
-    // birthday: String,
-    // profile_image: String,
-    // birthyear: String,
-    // mobile: String,
 }
 
 pub async fn auth_provider(

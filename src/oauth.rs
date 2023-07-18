@@ -2,6 +2,7 @@
 
 use std::{str::FromStr, time::Duration};
 
+use chrono::{DateTime, Utc};
 use oauth2::{
     basic::{
         BasicClient, BasicErrorResponse, BasicRevocationErrorResponse,
@@ -108,6 +109,46 @@ impl OAuthConfig {
             _ => panic!("OAuth 2.0 client other than Naver must be a `BasicClient`"),
         }
     }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct GoogleUser {
+    pub id: String,
+    pub email: String,
+    pub verified_email: bool,
+    pub name: String,
+    pub given_name: Option<String>,
+    pub family_name: Option<String>,
+    pub picture: String,
+    pub locale: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct KakaoUser {
+    pub id: u64,
+    pub connected_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct NaverUserResponse {
+    #[serde(rename = "resultcode")]
+    pub result_code: String,
+    pub message: String,
+    pub response: NaverUser,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct NaverUser {
+    pub id: String,
+    // nickname: String,
+    // name: String,
+    // email: String,
+    // gender: String,
+    // age: String,
+    // birthday: String,
+    // profile_image: String,
+    // birthyear: String,
+    // mobile: String,
 }
 
 ///
