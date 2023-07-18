@@ -12,7 +12,7 @@ use sqlx::{
 use crate::{
     error::ErrorResponse,
     nickname::{self, KoreanGenerator},
-    schema::{SeniorRegisterSchema, SeniorUserInfoSchema},
+    schema::{NormalUserInfoSchema, SeniorRegisterSchema, SeniorUserInfoSchema},
 };
 use crate::{oauth::OAuthProvider, Result};
 
@@ -161,6 +161,12 @@ impl User for NormalUser {
                 ErrorResponse { status: "fail", message: "Cannot find user".to_string() },
             )),
         }
+    }
+}
+
+impl From<NormalUser> for NormalUserInfoSchema {
+    fn from(value: NormalUser) -> Self {
+        Self { id: value.id, oauth_provider: value.oauth_provider, nickname: value.nickname }
     }
 }
 
@@ -359,20 +365,20 @@ impl User for SeniorUser {
     }
 }
 
-impl Into<SeniorUserInfoSchema> for SeniorUser {
-    fn into(self) -> SeniorUserInfoSchema {
+impl From<SeniorUser> for SeniorUserInfoSchema {
+    fn from(value: SeniorUser) -> Self {
         SeniorUserInfoSchema {
-            id: self.id,
-            nickname: self.nickname,
-            major: self.major,
-            experience_years: self.experience_years,
-            mentoring_price: self.mentoring_price,
-            representative_careers: self
+            id: value.id,
+            nickname: value.nickname,
+            major: value.major,
+            experience_years: value.experience_years,
+            mentoring_price: value.mentoring_price,
+            representative_careers: value
                 .representative_careers
                 .split('|')
                 .map(|s| s.to_string())
                 .collect(),
-            description: self.description,
+            description: value.description,
         }
     }
 }

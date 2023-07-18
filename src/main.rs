@@ -16,7 +16,7 @@ use std::sync::Arc;
 
 use axum::{
     middleware,
-    routing::{delete, get, patch, post},
+    routing::{get, patch, post},
     Router, Server,
 };
 use config::Config;
@@ -97,8 +97,14 @@ async fn main() {
         );
     let users_routers = Router::new()
         .route("/users/senior", post(handler::users::register_senior_user))
-        .route("/users/senior/:id", delete(handler::users::delete_senior_user))
-        .route("/users/normal/:id", delete(handler::users::delete_normal_user))
+        .route(
+            "/users/senior/:id",
+            get(handler::users::get_senior_user_info).delete(handler::users::delete_senior_user),
+        )
+        .route(
+            "/users/normal/:id",
+            get(handler::users::get_normal_user_info).delete(handler::users::delete_normal_user),
+        )
         .route("/users/senior/major", get(handler::users::get_seniors_from_major));
 
     let app = Router::new()
