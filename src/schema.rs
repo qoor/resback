@@ -3,6 +3,8 @@
 use axum_typed_multipart::TryFromMultipart;
 use serde::{Deserialize, Serialize};
 
+use crate::user::account::UserId;
+
 #[derive(Debug, Serialize, Deserialize, Clone, TryFromMultipart)]
 pub struct NormalLoginSchema {
     pub code: String,
@@ -29,6 +31,7 @@ pub struct SeniorLoginSchema {
 
 #[derive(Debug, Serialize, Clone)]
 pub struct SeniorUserInfoSchema {
+    pub id: UserId,
     pub nickname: String,
     pub major: String,
     pub experience_years: i32,

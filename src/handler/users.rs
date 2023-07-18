@@ -7,14 +7,9 @@ use axum::{
 };
 
 use axum_typed_multipart::TypedMultipart;
-use reqwest::StatusCode;
 
 use crate::{
-    error::ErrorResponse,
-    schema::{
-        CategorySearchResultSchema, CategorySearchSchema, SeniorRegisterSchema,
-        SeniorUserInfoSchema,
-    },
+    schema::{CategorySearchResultSchema, CategorySearchSchema, SeniorRegisterSchema},
     user::account::{self, NormalUser, SeniorUser, User, UserId},
     AppState, Result,
 };

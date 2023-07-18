@@ -388,6 +388,7 @@ impl User for SeniorUser {
 impl Into<SeniorUserInfoSchema> for SeniorUser {
     fn into(self) -> SeniorUserInfoSchema {
         SeniorUserInfoSchema {
+            id: self.id,
             nickname: self.nickname,
             major: self.major,
             experience_years: self.experience_years,
