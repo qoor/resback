@@ -18,9 +18,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Get repository name
+      - name: Save repository name
         run: |
           echo "REPOSITORY=${GITHUB_REPOSITORY#*/}" >> $GITHUB_ENV
+
+      - name: Get repository name
+        run: |
           echo "Repository name: ${{ env.REPOSITORY }}"
 
       - uses: actions/checkout@v3
@@ -85,5 +88,4 @@ jobs:
           script: |
             cd ${{ secrets.SSH_WORKING_DIR }}
             docker compose pull ${{ env.REPOSITORY }}
-            docker compose down || true
             docker compose up -d || true
