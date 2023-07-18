@@ -19,7 +19,7 @@ use sqlx::types::chrono::{DateTime, Utc};
 
 use crate::{
     error,
-    jwt::{generate_jwt_token, get_user_info_from_token, verify_token},
+    jwt::Token,
     oauth::OAuthProvider,
     schema::{NormalLoginSchema, SeniorLoginSchema},
     user::account::{SeniorUser, UserId},
@@ -147,7 +147,9 @@ pub async fn auth_refresh(
 ) -> crate::Result<impl IntoResponse> {
     let refresh_token = cookie_jar.get(REFRESH_TOKEN_COOKIE).map(|token| token.value().to_string());
 
-    let (user_type, user_id) = get_user_info_from_token(refresh_token.as_deref(), &data).await?;
+    let (user_id, user_type) =
+        Token::from_encoded_token(refresh_token.as_deref(), &data.config.public_key.decoding_key())
+            .map(|token| (token.user_id(), token.user_type()))?;
     let refresh_token = refresh_token.unwrap();
 
     let user_token = match user_type {
@@ -198,20 +200,23 @@ pub async fn logout_user(
         }),
     ))?;
 
-    let claims = verify_token(data.config.public_key.decoding_key(), &access_token.to_string())
-        .map(|token_data| token_data.claims)
-        .map_err(|_| {
-            (
-                StatusCode::UNAUTHORIZED,
-                crate::error::ErrorResponse {
-                    status: "fail",
-                    message: "Failed to verify user".to_string(),
-                },
-            )
-        })?;
+    let user_id = Token::from_encoded_token(
+        Some(&access_token.value().to_string()),
+        data.config.public_key.decoding_key(),
+    )
+    .map(|token| token.user_id())
+    .map_err(|_| {
+        (
+            StatusCode::UNAUTHORIZED,
+            crate::error::ErrorResponse {
+                status: "fail",
+                message: "Failed to verify user".to_string(),
+            },
+        )
+    })?;
     Ok((
         cookie_jar.clone().remove(access_token.clone()).remove(refresh_token.clone()),
-        Json(serde_json::json!({ "uid": claims.sub() })),
+        Json(serde_json::json!({ "id": user_id })),
     ))
 }
 
@@ -257,7 +262,7 @@ async fn add_access_token_to_cookie_jar(
     cookie_jar: CookieJar,
     data: &AppState,
 ) -> crate::Result<(CookieJar, Json<serde_json::Value>)> {
-    let access_token = generate_jwt_token(
+    let access_token = Token::new(
         data.config.private_key.encoding_key(),
         chrono::Duration::seconds(data.config.access_token_max_age),
         user_type,
@@ -288,7 +293,7 @@ where
     let (cookie_jar, _response) =
         add_access_token_to_cookie_jar(user.id(), user_type, cookie_jar, data).await?;
 
-    let refresh_token = generate_jwt_token(
+    let refresh_token = Token::new(
         data.config.private_key.encoding_key(),
         chrono::Duration::seconds(data.config.refresh_token_max_age),
         user_type,

@@ -60,12 +60,94 @@ impl Claims {
 }
 
 #[derive(Debug, Clone)]
-pub struct TokenData {
+pub struct Token {
     claims: Claims,
     encoded_token: String,
+    user_id: UserId,
+    user_type: UserType,
 }
 
-impl TokenData {
+impl Token {
+    pub fn new(
+        private_key: &EncodingKey,
+        expires_in: Duration,
+        user_type: UserType,
+        user_id: UserId,
+    ) -> Result<Token> {
+        let claims = Claims {
+            iss: "https://respec.team/api".to_string(),
+            iat: Utc::now().timestamp(),
+            exp: (Utc::now() + expires_in).timestamp(),
+            sub: user_id.to_string(),
+            nonce: user_type.to_string(),
+        };
+
+        jsonwebtoken::encode(
+            &jsonwebtoken::Header::new(jsonwebtoken::Algorithm::RS256),
+            &claims,
+            &private_key,
+        )
+        .map(|token| Ok(Token { claims, encoded_token: token, user_id, user_type }))
+        .map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                ErrorResponse { status: "fail", message: "Failed to create new token".to_string() },
+            )
+        })?
+    }
+
+    pub fn from_encoded_token(
+        encoded_token: Option<&str>,
+        public_key: &DecodingKey,
+    ) -> Result<Self> {
+        let encoded_token = encoded_token
+            .ok_or((
+                StatusCode::BAD_REQUEST,
+                ErrorResponse { status: "fail", message: "Token does not exist".to_string() },
+            ))
+            .and_then(|encoded_token| {
+                if encoded_token.is_empty() {
+                    return Err((
+                        StatusCode::BAD_REQUEST,
+                        ErrorResponse { status: "fail", message: "Invalid token size".to_string() },
+                    ));
+                }
+
+                Ok(encoded_token.to_string())
+            })?;
+
+        let claims = jsonwebtoken::decode::<Claims>(
+            &encoded_token,
+            public_key,
+            &jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::RS256),
+        )
+        .map_err(|_| {
+            (
+                StatusCode::UNAUTHORIZED,
+                ErrorResponse {
+                    status: "fail",
+                    message: "Token is invalid or expired".to_string(),
+                },
+            )
+        })
+        .map(|token| token.claims)?;
+
+        let user_id: UserId = claims.sub.parse().map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                ErrorResponse { status: "error", message: "Invalid user id".to_string() },
+            )
+        })?;
+        let user_type: UserType = claims.nonce.parse().map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                ErrorResponse { status: "error", message: "Invalid user type".to_string() },
+            )
+        })?;
+
+        Ok(Token { claims, encoded_token, user_id, user_type })
+    }
+
     pub fn claims(&self) -> &Claims {
         &self.claims
     }
@@ -73,34 +155,14 @@ impl TokenData {
     pub fn encoded_token(&self) -> &str {
         &self.encoded_token
     }
-}
 
-pub fn generate_jwt_token(
-    private_key: &EncodingKey,
-    expires_in: Duration,
-    user_type: UserType,
-    user_id: UserId,
-) -> Result<TokenData> {
-    let claims = Claims {
-        iss: "https://respec.team/api".to_string(),
-        iat: Utc::now().timestamp(),
-        exp: (Utc::now() + expires_in).timestamp(),
-        sub: user_id.to_string(),
-        nonce: user_type.to_string(),
-    };
+    pub fn user_id(&self) -> UserId {
+        self.user_id
+    }
 
-    jsonwebtoken::encode(
-        &jsonwebtoken::Header::new(jsonwebtoken::Algorithm::RS256),
-        &claims,
-        &private_key,
-    )
-    .map(|token| Ok(TokenData { claims, encoded_token: token }))
-    .map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            ErrorResponse { status: "fail", message: "Failed to generate token".to_string() },
-        )
-    })?
+    pub fn user_type(&self) -> UserType {
+        self.user_type
+    }
 }
 
 pub async fn authorize_user<B>(
@@ -124,7 +186,9 @@ pub async fn authorize_user<B>(
             .map(|auth_value| auth_value.token().to_string()),
     };
 
-    let (user_type, user_id) = get_user_info_from_token(access_token.as_deref(), &data).await?;
+    let (user_id, user_type) =
+        Token::from_encoded_token(access_token.as_deref(), data.config.public_key.decoding_key())
+            .map(|token| (token.user_id(), token.user_type()))?;
 
     let mut req = Request::from_parts(parts, body);
 
@@ -140,56 +204,4 @@ pub async fn authorize_user<B>(
 
     // Execute the next middleware
     Ok(next.run(req).await)
-}
-
-pub async fn get_user_info_from_token(
-    token: Option<&str>,
-    data: &Arc<AppState>,
-) -> Result<(UserType, UserId)> {
-    let token = token.ok_or_else(|| {
-        (
-            StatusCode::UNAUTHORIZED,
-            ErrorResponse {
-                status: "fail",
-                message: "You are not logged in. Please provide token".to_string(),
-            },
-        )
-    })?;
-
-    // Check if the access token has expired or invalid
-    let claims = verify_token(data.config.public_key.decoding_key(), &token)
-        .map_err(|_| {
-            (
-                StatusCode::UNAUTHORIZED,
-                ErrorResponse {
-                    status: "fail",
-                    message: "Your token is invalid or session has expired".to_string(),
-                },
-            )
-        })
-        .map(|token| token.claims)?;
-
-    let user_type = claims.nonce.parse::<UserType>().map_err(|_| {
-        (
-            StatusCode::UNAUTHORIZED,
-            ErrorResponse { status: "fail", message: "Unknown user type".to_string() },
-        )
-    })?;
-
-    Ok((user_type, claims.sub().parse::<UserId>().unwrap()))
-}
-
-/// Returns the full JWT token data if valid, otherwise returns an error
-///
-/// According to jsonwebtoken library, decoding RSA pem key is very
-/// expensive. So it takes an already decoded key.
-pub fn verify_token(
-    decoding_key: &DecodingKey,
-    token: &str,
-) -> jsonwebtoken::errors::Result<jsonwebtoken::TokenData<Claims>> {
-    jsonwebtoken::decode::<Claims>(
-        token,
-        &decoding_key,
-        &jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::RS256),
-    )
 }
