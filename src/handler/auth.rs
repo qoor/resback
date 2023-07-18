@@ -28,8 +28,8 @@ use crate::{
 use crate::{
     jwt::{ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE},
     user::{
-        account::{NormalUser, User, UserType},
-        OAuthUserData,
+        account::{NormalUser, User},
+        OAuthUserData, UserType,
     },
 };
 

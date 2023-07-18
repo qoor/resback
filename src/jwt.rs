@@ -17,7 +17,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     error::ErrorResponse,
-    user::account::{NormalUser, SeniorUser, User, UserId, UserType},
+    user::{
+        account::{NormalUser, SeniorUser, User, UserId},
+        UserType,
+    },
     AppState, Result,
 };
 

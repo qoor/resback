@@ -1,7 +1,5 @@
 // Copyright 2023. The resback authors all rights reserved.
 
-use std::str::FromStr;
-
 use argon2::{password_hash::SaltString, Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use axum::{async_trait, http::StatusCode};
 use rand::rngs::OsRng;
@@ -33,30 +31,6 @@ pub struct NormalUser {
     refresh_token: Option<String>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum UserType {
-    NormalUser,
-    SeniorUser,
-}
-
-impl FromStr for UserType {
-    type Err = String;
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        match s {
-            "NormalUser" => Ok(Self::NormalUser),
-            "SeniorUser" => Ok(Self::SeniorUser),
-            _ => Err("Invalid user type string".to_string()),
-        }
-    }
-}
-
-impl std::fmt::Display for UserType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
-    }
 }
 
 #[async_trait]
