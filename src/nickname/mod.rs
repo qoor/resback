@@ -119,9 +119,6 @@ impl<'a> KoreanName<'a> for names::Generator<'a> {
     }
 
     fn next_pretty(&mut self) -> Option<String> {
-        match self.next() {
-            Some(name) => Some(name.replacen('-', " ", 1)),
-            None => None,
-        }
+        self.next().map(|name| name.replacen('-', " ", 1))
     }
 }

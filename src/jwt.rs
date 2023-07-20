@@ -46,16 +46,8 @@ pub struct Claims {
 }
 
 impl Claims {
-    pub fn sub(&self) -> &str {
-        &self.sub
-    }
-
     pub fn expires_in(&self) -> i64 {
         self.exp - self.iat
-    }
-
-    pub fn nonce(&self) -> &str {
-        &self.nonce
     }
 }
 
@@ -85,7 +77,7 @@ impl Token {
         jsonwebtoken::encode(
             &jsonwebtoken::Header::new(jsonwebtoken::Algorithm::RS256),
             &claims,
-            &private_key,
+            private_key,
         )
         .map(|token| Ok(Token { claims, encoded_token: token, user_id, user_type }))
         .map_err(|_| {

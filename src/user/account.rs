@@ -71,7 +71,7 @@ impl NormalUser {
         oauth_user: &OAuthUserData,
         pool: &sqlx::Pool<MySql>,
     ) -> Result<Self> {
-        let user_data = sqlx::query_as_unchecked!(
+        sqlx::query_as_unchecked!(
             Self,
             "SELECT * FROM normal_users WHERE oauth_provider = ? AND oauth_id = ?",
             oauth_user.provider(),
@@ -88,9 +88,7 @@ impl NormalUser {
         .ok_or((
             StatusCode::BAD_REQUEST,
             ErrorResponse { status: "fail", message: "Invalid OAuth user data".to_string() },
-        ));
-
-        user_data
+        ))
     }
 }
 
@@ -105,28 +103,19 @@ impl User for NormalUser {
     }
 
     async fn from_id(id: UserId, pool: &sqlx::Pool<MySql>) -> Result<Self> {
-        let user_data =
-            sqlx::query_as_unchecked!(Self, "SELECT * FROM normal_users WHERE id = ?", id)
-                .fetch_optional(pool)
-                .await
-                .map_err(|err| {
-                    (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        ErrorResponse {
-                            status: "error",
-                            message: format!("Database error: {}", err),
-                        },
-                    )
-                })?
-                .ok_or((
-                    StatusCode::BAD_REQUEST,
-                    ErrorResponse {
-                        status: "fail",
-                        message: "Invalid OAuth user data".to_string(),
-                    },
-                ));
-
-        user_data
+        sqlx::query_as_unchecked!(Self, "SELECT * FROM normal_users WHERE id = ?", id)
+            .fetch_optional(pool)
+            .await
+            .map_err(|err| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    ErrorResponse { status: "error", message: format!("Database error: {}", err) },
+                )
+            })?
+            .ok_or((
+                StatusCode::BAD_REQUEST,
+                ErrorResponse { status: "fail", message: "Invalid OAuth user data".to_string() },
+            ))
     }
 
     async fn update_refresh_token(&self, token: &str, pool: &sqlx::Pool<MySql>) -> Result<&Self> {
@@ -140,7 +129,7 @@ impl User for NormalUser {
                 )
             })?;
 
-        Ok(&self)
+        Ok(self)
     }
 
     async fn delete(id: UserId, pool: &sqlx::Pool<MySql>) -> Result<UserId> {
@@ -292,10 +281,6 @@ impl SeniorUser {
 
         Ok(user)
     }
-
-    pub fn email(&self) -> &str {
-        &self.email
-    }
 }
 
 #[async_trait]
@@ -309,25 +294,19 @@ impl User for SeniorUser {
     }
 
     async fn from_id(id: UserId, pool: &sqlx::Pool<MySql>) -> Result<Self> {
-        let user_data =
-            sqlx::query_as_unchecked!(Self, "SELECT * FROM senior_users WHERE id = ?", id)
-                .fetch_optional(pool)
-                .await
-                .map_err(|err| {
-                    (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        ErrorResponse {
-                            status: "error",
-                            message: format!("Database error: {}", err),
-                        },
-                    )
-                })?
-                .ok_or((
-                    StatusCode::BAD_REQUEST,
-                    ErrorResponse { status: "fail", message: "Invalid senior user id".to_string() },
-                ));
-
-        user_data
+        sqlx::query_as_unchecked!(Self, "SELECT * FROM senior_users WHERE id = ?", id)
+            .fetch_optional(pool)
+            .await
+            .map_err(|err| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    ErrorResponse { status: "error", message: format!("Database error: {}", err) },
+                )
+            })?
+            .ok_or((
+                StatusCode::BAD_REQUEST,
+                ErrorResponse { status: "fail", message: "Invalid senior user id".to_string() },
+            ))
     }
 
     async fn update_refresh_token(&self, token: &str, pool: &sqlx::Pool<MySql>) -> Result<&Self> {
@@ -341,7 +320,7 @@ impl User for SeniorUser {
                 )
             })?;
 
-        Ok(&self)
+        Ok(self)
     }
 
     async fn delete(id: UserId, pool: &sqlx::Pool<MySql>) -> Result<UserId> {

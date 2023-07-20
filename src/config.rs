@@ -29,7 +29,6 @@ pub struct Config {
 
 #[derive(Clone)]
 pub struct RSAKey {
-    path: std::path::PathBuf,
     key: String,
     encoding_key: EncodingKey,
     decoding_key: DecodingKey,
@@ -39,7 +38,6 @@ impl RSAKey {
     fn from_file(path: &std::path::PathBuf) -> io::Result<Self> {
         match std::fs::read_to_string(path) {
             Ok(key) => Ok(Self {
-                path: path.to_path_buf(),
                 key: key.clone(),
                 encoding_key: EncodingKey::from_rsa_pem(key.as_bytes()).unwrap(),
                 decoding_key: DecodingKey::from_rsa_pem(key.as_bytes()).unwrap(),

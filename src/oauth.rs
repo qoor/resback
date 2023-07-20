@@ -267,8 +267,8 @@ where
             access_token: st.access_token().clone(),
             token_type: st.token_type().clone(),
             expires_in: expire_time_string,
-            refresh_token: st.refresh_token().map(|r| r.clone()),
-            scopes: st.scopes().map(|s| s.clone()),
+            refresh_token: st.refresh_token().cloned(),
+            scopes: st.scopes().cloned(),
             extra_fields,
         }
     }

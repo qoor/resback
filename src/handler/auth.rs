@@ -107,7 +107,7 @@ pub async fn auth_refresh(
     let refresh_token = cookie_jar.get(REFRESH_TOKEN_COOKIE).map(|token| token.value().to_string());
 
     let (user_id, user_type) =
-        Token::from_encoded_token(refresh_token.as_deref(), &data.config.public_key.decoding_key())
+        Token::from_encoded_token(refresh_token.as_deref(), data.config.public_key.decoding_key())
             .map(|token| (token.user_id(), token.user_type()))?;
     let refresh_token = refresh_token.unwrap();
 
@@ -160,7 +160,7 @@ pub async fn logout_user(
     ))?;
 
     let user_id = Token::from_encoded_token(
-        Some(&access_token.value().to_string()),
+        Some(access_token.value()),
         data.config.public_key.decoding_key(),
     )
     .map(|token| token.user_id())
@@ -201,8 +201,7 @@ where
         .unwrap();
 
     // Fetch user data from `user_data_url`
-    let request_client = reqwest::Client::new();
-    let user_data = request_client
+    reqwest::Client::new()
         .get(user_data_url)
         .bearer_auth(token.access_token().secret())
         .send()
@@ -210,9 +209,7 @@ where
         .unwrap()
         .json::<U>()
         .await
-        .unwrap();
-
-    user_data
+        .unwrap()
 }
 
 async fn add_access_token_to_cookie_jar(
