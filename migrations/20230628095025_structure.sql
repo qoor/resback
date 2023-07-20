@@ -21,10 +21,10 @@
 -- Table structure for table `normal_users`
 --
 
-/*DROP TABLE IF EXISTS `normal_users`; */
+DROP TABLE IF EXISTS `normal_users`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE IF NOT EXISTS `normal_users` (
+CREATE TABLE `normal_users` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `oauth_provider` varchar(10) NOT NULL,
   `oauth_id` varchar(64) NOT NULL,
@@ -41,10 +41,10 @@ CREATE TABLE IF NOT EXISTS `normal_users` (
 -- Table structure for table `senior_users`
 --
 
-/*DROP TABLE IF EXISTS `senior_users`; */
+DROP TABLE IF EXISTS `senior_users`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE IF NOT EXISTS `senior_users` (
+CREATE TABLE `senior_users` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `email` varchar(128) NOT NULL,
   `password` varchar(128) NOT NULL,
