@@ -14,10 +14,10 @@ publish = false
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-argon2 = "0.5.0"
-axum = { version = "0.6.18", features = ["headers"] }
-axum-extra = { version = "0.7.4", features = ["cookie"] }
-axum_typed_multipart = "0.4.0"
+argon2 = "0.5.1"
+axum = { version = "0.6.19", features = ["headers"] }
+axum-extra = { version = "0.7.5", features = ["cookie"] }
+axum_typed_multipart = "0.5.1"
 chrono = { version = "0.4.26", features = ["serde"] }
 dotenvy = "0.15.7"
 jsonwebtoken = { version = "8.3.0", features = ["use_pem"] }
@@ -25,11 +25,11 @@ names = { version = "0.14.0", default-features = false }
 oauth2 = "4.4.1"
 rand = "0.8.5"
 reqwest = { version = "0.11.18", features = ["native-tls", "json"] }
-serde = { version = "1.0.164", features = ["derive"] }
-serde_json = "1.0.97"
-sqlx = { version = "0.6.3", features = ["runtime-tokio-native-tls", "mysql", "chrono", "offline"] }
-time = "0.3.22"
-tokio = { version = "1.28.2", features = ["full"] }
+serde = { version = "1.0.173", features = ["derive"] }
+serde_json = "1.0.103"
+sqlx = { version = "0.7.1", features = ["runtime-tokio-native-tls", "mysql", "chrono", "time"] }
+time = "0.3.23"
+tokio = { version = "1.29.1", features = ["full"] }
 tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 

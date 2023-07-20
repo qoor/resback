@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "DELETE FROM normal_users WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "11c898f25ea905695690fb711e97b2cc6b15fa873b1a90fb0f897ce5ddc7eb29"
+}
