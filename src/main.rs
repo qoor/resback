@@ -16,7 +16,7 @@ use std::sync::Arc;
 
 use axum::{
     middleware,
-    routing::{get, patch, post},
+    routing::{delete, get, patch, post},
     Router, Server,
 };
 use config::Config;
@@ -81,30 +81,20 @@ async fn main() {
         naver_oauth: config.naver_oauth.to_non_standard_client(),
     });
 
+    let auth_layer = middleware::from_fn_with_state(app_state.clone(), jwt::authorize_user);
+
     let root_routers = Router::new().route("/", get(handler::root));
     let auth_routers = Router::new()
         .route("/auth/:provider", post(handler::auth::auth_provider))
         .route("/auth/senior", post(handler::auth::auth_senior))
-        .route(
-            "/auth/token",
-            patch(handler::auth::auth_refresh)
-                .route_layer(middleware::from_fn_with_state(app_state.clone(), jwt::authorize_user))
-                .delete(handler::auth::logout_user)
-                .route_layer(middleware::from_fn_with_state(
-                    app_state.clone(),
-                    jwt::authorize_user,
-                )),
-        );
+        .route("/auth/token", patch(handler::auth::auth_refresh).route_layer(auth_layer.clone()))
+        .route("/auth/token", delete(handler::auth::logout_user).route_layer(auth_layer.clone()));
     let users_routers = Router::new()
         .route("/users/senior", post(handler::users::register_senior_user))
-        .route(
-            "/users/senior/:id",
-            get(handler::users::get_senior_user_info).delete(handler::users::delete_senior_user),
-        )
-        .route(
-            "/users/normal/:id",
-            get(handler::users::get_normal_user_info).delete(handler::users::delete_normal_user),
-        )
+        .route("/users/senior/:id", get(handler::users::get_senior_user_info))
+        .route("/users/senior/:id", delete(handler::users::delete_senior_user))
+        .route("/users/normal/:id", get(handler::users::get_normal_user_info))
+        .route("/users/normal/:id", delete(handler::users::delete_normal_user))
         .route("/users/senior/major", get(handler::users::get_seniors_from_major));
 
     let app = Router::new()
