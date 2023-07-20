@@ -12,7 +12,7 @@ use sqlx::{
 use crate::{
     error::ErrorResponse,
     nickname::{self, KoreanGenerator},
-    schema::{NormalUserInfoSchema, SeniorRegisterSchema, SeniorUserInfoSchema},
+    schema::{JsonArray, NormalUserInfoSchema, SeniorRegisterSchema, SeniorUserInfoSchema},
 };
 use crate::{oauth::OAuthProvider, Result};
 
@@ -231,7 +231,7 @@ impl SeniorUser {
             register_data.major,
             register_data.experience_years,
             register_data.mentoring_price,
-            register_data.representative_careers.join("|"),
+            register_data.representative_careers.to_string(),
             register_data.description
         ).execute(pool).await.map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, ErrorResponse {
             status: "error",
@@ -373,11 +373,8 @@ impl From<SeniorUser> for SeniorUserInfoSchema {
             major: value.major,
             experience_years: value.experience_years,
             mentoring_price: value.mentoring_price,
-            representative_careers: value
-                .representative_careers
-                .split('|')
-                .map(|s| s.to_string())
-                .collect(),
+            representative_careers: JsonArray::from_str(&value.representative_careers)
+                .unwrap_or_default(),
             description: value.description,
         }
     }

@@ -20,7 +20,7 @@ pub struct SeniorRegisterSchema {
     pub major: String,
     pub experience_years: i32,
     pub mentoring_price: i32,
-    pub representative_careers: Vec<String>,
+    pub representative_careers: JsonArray<String>,
     pub description: String,
 }
 
