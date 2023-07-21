@@ -13,6 +13,7 @@ use crate::{
     error::ErrorResponse,
     nickname::{self, KoreanGenerator},
     schema::{JsonArray, NormalUserInfoSchema, SeniorRegisterSchema, SeniorUserInfoSchema},
+    user::{picture::get_random_user_picture_url, UserType},
 };
 use crate::{oauth::OAuthProvider, Result};
 
@@ -21,17 +22,6 @@ use super::OAuthUserData;
 pub type UserId = u64;
 
 const PEPPER: &str = "dV9h;TroC@ref}L}\\{_4d31.Fcv?ljN";
-
-#[derive(Debug, sqlx::FromRow, Serialize, Deserialize, Clone)]
-pub struct NormalUser {
-    id: UserId,
-    oauth_provider: OAuthProvider,
-    oauth_id: String,
-    nickname: String,
-    refresh_token: Option<String>,
-    created_at: DateTime<Utc>,
-    updated_at: DateTime<Utc>,
-}
 
 #[async_trait]
 pub trait User: Sized {
@@ -46,14 +36,27 @@ pub trait User: Sized {
     async fn delete(id: UserId, pool: &sqlx::Pool<MySql>) -> Result<UserId>;
 }
 
+#[derive(Debug, sqlx::FromRow, Serialize, Deserialize, Clone)]
+pub struct NormalUser {
+    id: UserId,
+    oauth_provider: OAuthProvider,
+    oauth_id: String,
+    nickname: String,
+    picture: String,
+    refresh_token: Option<String>,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
+}
+
 impl NormalUser {
     pub async fn register(oauth_user: &OAuthUserData, pool: &sqlx::Pool<MySql>) -> Result<UserId> {
         let nickname = KoreanGenerator::new(nickname::Naming::Plain).next();
         let result = sqlx::query!(
-            "INSERT INTO normal_users (oauth_provider, oauth_id, nickname) VALUES (?, ?, ?)",
+            "INSERT INTO normal_users (oauth_provider, oauth_id, nickname, picture) VALUES (?, ?, ?, ?)",
             oauth_user.provider,
             oauth_user.id,
-            nickname
+            nickname,
+            get_random_user_picture_url(UserType::NormalUser)
         )
         .execute(pool)
         .await
@@ -155,7 +158,12 @@ impl User for NormalUser {
 
 impl From<NormalUser> for NormalUserInfoSchema {
     fn from(value: NormalUser) -> Self {
-        Self { id: value.id, oauth_provider: value.oauth_provider, nickname: value.nickname }
+        Self {
+            id: value.id,
+            oauth_provider: value.oauth_provider,
+            nickname: value.nickname,
+            picture: value.picture,
+        }
     }
 }
 
@@ -167,6 +175,7 @@ pub struct SeniorUser {
     name: String,
     phone: String,
     nickname: String,
+    picture: String,
     major: String,
     experience_years: i32,
     mentoring_price: i32,
@@ -211,7 +220,7 @@ impl SeniorUser {
 
         let nickname = KoreanGenerator::new(nickname::Naming::Plain).next();
         let user = sqlx::query!(
-            "INSERT INTO senior_users (email, password, name, phone, nickname, major, experience_years, mentoring_price, representative_careers, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO senior_users (email, password, name, phone, nickname, picture, major, experience_years, mentoring_price, representative_careers, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             register_data.email,
             hashed_password,
             register_data.name,
@@ -221,7 +230,8 @@ impl SeniorUser {
             register_data.experience_years,
             register_data.mentoring_price,
             register_data.representative_careers.to_string(),
-            register_data.description
+            register_data.description,
+            get_random_user_picture_url(UserType::SeniorUser)
         ).execute(pool).await.map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, ErrorResponse {
             status: "error",
             message: format!("Database error: {}", err)
@@ -349,6 +359,7 @@ impl From<SeniorUser> for SeniorUserInfoSchema {
         SeniorUserInfoSchema {
             id: value.id,
             nickname: value.nickname,
+            picture: value.picture,
             major: value.major,
             experience_years: value.experience_years,
             mentoring_price: value.mentoring_price,

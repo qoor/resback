@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "INSERT INTO normal_users (oauth_provider, oauth_id, nickname, picture) VALUES (?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "da5fd01995d67fc2698910799d749f639f1aad145f426ee5d8ff03a629a4653f"
+}

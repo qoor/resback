@@ -35,12 +35,14 @@ pub struct NormalUserInfoSchema {
     pub id: UserId,
     pub oauth_provider: OAuthProvider,
     pub nickname: String,
+    pub picture: String,
 }
 
 #[derive(Debug, Serialize, Clone)]
 pub struct SeniorUserInfoSchema {
     pub id: UserId,
     pub nickname: String,
+    pub picture: String,
     pub major: String,
     pub experience_years: i32,
     pub mentoring_price: i32,

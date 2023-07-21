@@ -5,6 +5,7 @@ use std::str::FromStr;
 use crate::oauth::OAuthProvider;
 
 pub mod account;
+pub mod picture;
 
 #[derive(Debug, Clone, Copy)]
 pub enum UserType {

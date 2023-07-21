@@ -45,6 +45,16 @@
       },
       {
         "ordinal": 4,
+        "name": "picture",
+        "type_info": {
+          "type": "VarString",
+          "flags": "NOT_NULL | NO_DEFAULT_VALUE",
+          "char_set": 224,
+          "max_size": 4096
+        }
+      },
+      {
+        "ordinal": 5,
         "name": "refresh_token",
         "type_info": {
           "type": "VarString",
@@ -54,7 +64,7 @@
         }
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "created_at",
         "type_info": {
           "type": "Timestamp",
@@ -64,7 +74,7 @@
         }
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "updated_at",
         "type_info": {
           "type": "Timestamp",
@@ -78,6 +88,7 @@
       "Right": 1
     },
     "nullable": [
+      false,
       false,
       false,
       false,
