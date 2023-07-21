@@ -10,10 +10,9 @@ use axum_typed_multipart::TypedMultipart;
 
 use crate::{
     schema::{
-        CategorySearchResultSchema, CategorySearchSchema, NormalUserInfoSchema,
-        SeniorRegisterSchema, SeniorUserInfoSchema,
+        NormalUserInfoSchema, SeniorRegisterSchema, SeniorSearchSchema, SeniorUserInfoSchema,
     },
-    user::account::{self, NormalUser, SeniorUser, User, UserId},
+    user::account::{NormalUser, SeniorUser, User, UserId},
     AppState, Result,
 };
 
@@ -55,11 +54,9 @@ pub async fn delete_normal_user(
     NormalUser::delete(id, &data.database).await.map(|id| Json(serde_json::json!({ "uid": id })))
 }
 
-pub async fn get_seniors_from_major(
-    Query(search_info): Query<CategorySearchSchema>,
+pub async fn get_seniors(
+    Query(search_info): Query<SeniorSearchSchema>,
     State(data): State<Arc<AppState>>,
 ) -> crate::Result<impl IntoResponse> {
-    Ok(Json(CategorySearchResultSchema {
-        seniors: account::get_seniors_from_major(&search_info.major, &data.database).await?,
-    }))
+    Ok(Json(SeniorUser::get_all(search_info, &data.database).await?))
 }

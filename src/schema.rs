@@ -51,12 +51,12 @@ pub struct SeniorUserInfoSchema {
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct CategorySearchSchema {
-    pub major: String,
+pub struct SeniorSearchSchema {
+    pub major: Option<String>,
 }
 
 #[derive(Debug, Serialize, Clone)]
-pub struct CategorySearchResultSchema {
+pub struct SeniorSearchResultSchema {
     pub seniors: Vec<SeniorUserInfoSchema>,
 }
 

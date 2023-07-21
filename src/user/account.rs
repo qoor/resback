@@ -12,7 +12,10 @@ use sqlx::{
 use crate::{
     error::ErrorResponse,
     nickname::{self, KoreanGenerator},
-    schema::{JsonArray, NormalUserInfoSchema, SeniorRegisterSchema, SeniorUserInfoSchema},
+    schema::{
+        JsonArray, NormalUserInfoSchema, SeniorRegisterSchema, SeniorSearchResultSchema,
+        SeniorSearchSchema, SeniorUserInfoSchema,
+    },
     user::{picture::get_random_user_picture_url, UserType},
 };
 use crate::{oauth::OAuthProvider, Result};
@@ -291,6 +294,54 @@ impl SeniorUser {
 
         Ok(user)
     }
+
+    pub async fn get_all(
+        options: SeniorSearchSchema,
+        pool: &sqlx::Pool<MySql>,
+    ) -> Result<SeniorSearchResultSchema> {
+        if let Some(major) = options.major {
+            let seniors: Vec<SeniorUserInfoSchema> = sqlx::query_as_unchecked!(
+                SeniorUser,
+                "SELECT * FROM senior_users WHERE major = ?",
+                major
+            )
+            .fetch_all(pool)
+            .await
+            .map_err(|err| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    ErrorResponse {
+                        status: "error",
+                        message: format!("Database error: {:?}", err),
+                    },
+                )
+            })?
+            .into_iter()
+            .map(|senior| senior.into())
+            .collect();
+
+            return Ok(SeniorSearchResultSchema { seniors });
+        }
+
+        let seniors: Vec<SeniorUserInfoSchema> =
+            sqlx::query_as_unchecked!(Self, "SELECT * FROM senior_users")
+                .fetch_all(pool)
+                .await
+                .map_err(|err| {
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        ErrorResponse {
+                            status: "error",
+                            message: format!("Database error: {:?}", err),
+                        },
+                    )
+                })?
+                .into_iter()
+                .map(|senior| senior.into())
+                .collect();
+
+        Ok(SeniorSearchResultSchema { seniors })
+    }
 }
 
 #[async_trait]
@@ -368,28 +419,4 @@ impl From<SeniorUser> for SeniorUserInfoSchema {
             description: value.description,
         }
     }
-}
-
-pub async fn get_seniors_from_major(
-    major: &str,
-    pool: &sqlx::Pool<MySql>,
-) -> Result<Vec<SeniorUserInfoSchema>> {
-    let seniors: Vec<SeniorUserInfoSchema> =
-        sqlx::query_as_unchecked!(SeniorUser, "SELECT * FROM senior_users WHERE major = ?", major)
-            .fetch_all(pool)
-            .await
-            .map_err(|err| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    ErrorResponse {
-                        status: "error",
-                        message: format!("Database error: {:?}", err),
-                    },
-                )
-            })?
-            .into_iter()
-            .map(|senior| senior.into())
-            .collect();
-
-    Ok(seniors)
 }

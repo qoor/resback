@@ -90,12 +90,14 @@ async fn main() {
         .route("/auth/token", patch(handler::auth::auth_refresh).route_layer(auth_layer.clone()))
         .route("/auth/token", delete(handler::auth::logout_user).route_layer(auth_layer.clone()));
     let users_routers = Router::new()
-        .route("/users/senior", post(handler::users::register_senior_user))
+        .route(
+            "/users/senior",
+            post(handler::users::register_senior_user).get(handler::users::get_seniors),
+        )
         .route("/users/senior/:id", get(handler::users::get_senior_user_info))
         .route("/users/senior/:id", delete(handler::users::delete_senior_user))
         .route("/users/normal/:id", get(handler::users::get_normal_user_info))
-        .route("/users/normal/:id", delete(handler::users::delete_normal_user))
-        .route("/users/senior/major", get(handler::users::get_seniors_from_major));
+        .route("/users/normal/:id", delete(handler::users::delete_normal_user));
 
     let app = Router::new()
         .merge(root_routers)
