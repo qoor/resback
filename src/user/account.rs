@@ -229,12 +229,12 @@ impl SeniorUser {
             register_data.name,
             register_data.phone,
             nickname,
+            get_random_user_picture_url(UserType::SeniorUser),
             register_data.major,
             register_data.experience_years,
             register_data.mentoring_price,
             register_data.representative_careers.to_string(),
             register_data.description,
-            get_random_user_picture_url(UserType::SeniorUser)
         ).execute(pool).await.map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, ErrorResponse {
             status: "error",
             message: format!("Database error: {}", err)
