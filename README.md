@@ -10,15 +10,21 @@ Make sure these dependencies are already installed.
 ## Getting Started
 1. Clone this repository.
 ``` shell
-git clone https://github.com/choijunhyuck/resback
+git clone https://github.com/respec-team/resback
 ```
 
-2. Build the executable using Cargo.
+2. Build an executable using Cargo.
 ``` shell
 cargo build
 ```
 
-3. Run the executable.
+3. Create `.env` file
+``` shell
+# Example of applying production environment settings
+ln -s $(pwd)/.env.prod $(pwd)/.env
+```
+
+4. Run the executable.
 ``` shell
 cargo run
 ```

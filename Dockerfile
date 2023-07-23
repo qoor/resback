@@ -83,7 +83,7 @@ WORKDIR /resback/
 
 # Copy files needed for runtime
 COPY --from=builder /usr/src/resback/target/x86_64-unknown-linux-gnu/release/resback ./
-COPY --from=builder /usr/src/resback/.env ./.env
+COPY --from=builder /usr/src/resback/.env.prod ./.env
 COPY --from=builder /usr/src/resback/private_key.pem ./private_key.pem
 COPY --from=builder /usr/src/resback/public_key.pem ./public_key.pem
 
@@ -96,7 +96,7 @@ WORKDIR /resback/
 
 # Copy files needed for runtime
 COPY --from=builder /usr/src/resback/target/aarch64-unknown-linux-gnu/release/resback ./
-COPY --from=builder /usr/src/resback/.env ./.env
+COPY --from=builder /usr/src/resback/.env.prod ./.env
 COPY --from=builder /usr/src/resback/private_key.pem ./private_key.pem
 COPY --from=builder /usr/src/resback/public_key.pem ./public_key.pem
 
