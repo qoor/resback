@@ -11,8 +11,12 @@ use axum_typed_multipart::TypedMultipart;
 use crate::{
     schema::{
         NormalUserInfoSchema, SeniorRegisterSchema, SeniorSearchSchema, SeniorUserInfoSchema,
+        UserIdentificationSchema,
     },
-    user::account::{NormalUser, SeniorUser, User, UserId},
+    user::{
+        account::{NormalUser, SeniorUser, User, UserId},
+        UserType,
+    },
     AppState, Result,
 };
 
@@ -20,8 +24,8 @@ pub async fn register_senior_user(
     State(data): State<Arc<AppState>>,
     TypedMultipart(register_data): TypedMultipart<SeniorRegisterSchema>,
 ) -> Result<impl IntoResponse> {
-    let user_id = SeniorUser::register(&register_data, &data.database).await?;
-    Ok(Json(serde_json::json!({ "id": user_id })))
+    let id = SeniorUser::register(&register_data, &data.database).await?;
+    Ok(Json(UserIdentificationSchema { user_type: UserType::SeniorUser, id }))
 }
 
 pub async fn get_senior_user_info(
@@ -36,7 +40,9 @@ pub async fn delete_senior_user(
     Path(id): Path<UserId>,
     State(data): State<Arc<AppState>>,
 ) -> crate::Result<impl IntoResponse> {
-    SeniorUser::delete(id, &data.database).await.map(|id| Json(serde_json::json!({ "uid": id })))
+    SeniorUser::delete(id, &data.database)
+        .await
+        .map(|id| Json(UserIdentificationSchema { user_type: UserType::SeniorUser, id }))
 }
 
 pub async fn get_normal_user_info(
@@ -51,7 +57,9 @@ pub async fn delete_normal_user(
     Path(id): Path<UserId>,
     State(data): State<Arc<AppState>>,
 ) -> crate::Result<impl IntoResponse> {
-    NormalUser::delete(id, &data.database).await.map(|id| Json(serde_json::json!({ "uid": id })))
+    NormalUser::delete(id, &data.database)
+        .await
+        .map(|id| Json(UserIdentificationSchema { user_type: UserType::NormalUser, id }))
 }
 
 pub async fn get_seniors(

@@ -4,7 +4,10 @@ use axum::{async_trait, extract::multipart};
 use axum_typed_multipart::{TryFromMultipart, TypedMultipartError};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use crate::{oauth::OAuthProvider, user::account::UserId};
+use crate::{
+    oauth::OAuthProvider,
+    user::{account::UserId, UserType},
+};
 
 #[derive(Debug, Serialize, Deserialize, Clone, TryFromMultipart)]
 pub struct NormalLoginSchema {
@@ -28,6 +31,12 @@ pub struct SeniorRegisterSchema {
 pub struct SeniorLoginSchema {
     pub email: String,
     pub password: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, TryFromMultipart)]
+pub struct UserIdentificationSchema {
+    pub user_type: UserType,
+    pub id: UserId,
 }
 
 #[derive(Debug, Serialize, Clone)]

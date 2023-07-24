@@ -20,7 +20,7 @@ use crate::{
     error,
     jwt::Token,
     oauth::{GoogleUser, KakaoUser, NaverUserResponse, OAuthProvider},
-    schema::{NormalLoginSchema, SeniorLoginSchema},
+    schema::{NormalLoginSchema, SeniorLoginSchema, UserIdentificationSchema},
     user::account::{SeniorUser, UserId},
     AppState,
 };
@@ -159,11 +159,11 @@ pub async fn logout_user(
         }),
     ))?;
 
-    let user_id = Token::from_encoded_token(
+    let (user_type, id) = Token::from_encoded_token(
         Some(access_token.value()),
         data.config.public_key.decoding_key(),
     )
-    .map(|token| token.user_id())
+    .map(|token| (token.user_type(), token.user_id()))
     .map_err(|_| {
         (
             StatusCode::UNAUTHORIZED,
@@ -175,7 +175,7 @@ pub async fn logout_user(
     })?;
     Ok((
         cookie_jar.clone().remove(access_token.clone()).remove(refresh_token.clone()),
-        Json(serde_json::json!({ "id": user_id })),
+        Json(UserIdentificationSchema { user_type, id }),
     ))
 }
 
@@ -217,7 +217,7 @@ async fn add_access_token_to_cookie_jar(
     user_type: UserType,
     cookie_jar: CookieJar,
     data: &AppState,
-) -> crate::Result<(CookieJar, Json<serde_json::Value>)> {
+) -> crate::Result<(CookieJar, impl IntoResponse)> {
     let access_token = Token::new(
         data.config.private_key.encoding_key(),
         chrono::Duration::seconds(data.config.access_token_max_age),
@@ -233,7 +233,7 @@ async fn add_access_token_to_cookie_jar(
                 .max_age(time::Duration::seconds(access_token.claims().expires_in()))
                 .finish(),
         ),
-        Json(serde_json::json!({ "id": user_id })),
+        Json(UserIdentificationSchema { user_type, id: user_id }),
     ))
 }
 
@@ -266,6 +266,6 @@ where
                 .max_age(time::Duration::seconds(refresh_token.claims().expires_in()))
                 .finish(),
         ),
-        Json(serde_json::json!({ "id": user.id() })),
+        Json(UserIdentificationSchema { user_type, id: user.id() }),
     ))
 }
