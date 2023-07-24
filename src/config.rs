@@ -13,7 +13,6 @@ use crate::{
 pub struct Config {
     pub address: String,
     pub port: u16,
-    pub database_url: String,
     pub front_url: String,
 
     pub google_oauth: OAuthConfig,
@@ -68,7 +67,6 @@ impl Config {
         Self {
             address: format!("0.0.0.0:{}", port),
             port,
-            database_url: get_env_or_panic("MYSQL_DATABASE_URL"),
             front_url: env!("CARGO_PKG_HOMEPAGE").to_string(),
 
             google_oauth: OAuthConfig::init(OAuthProvider::Google),
@@ -91,5 +89,11 @@ impl Config {
                 .parse::<i64>()
                 .unwrap(),
         }
+    }
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self::new()
     }
 }
