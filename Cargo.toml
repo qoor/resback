@@ -20,6 +20,7 @@ axum-extra = { version = "0.7.5", features = ["cookie"] }
 axum_typed_multipart = "0.5.1"
 chrono = { version = "0.4.26", features = ["serde"] }
 dotenvy = "0.15.7"
+hyper = { version = "0.14.27", features = ["full"] }
 jsonwebtoken = { version = "8.3.0", features = ["use_pem"] }
 names = { version = "0.14.0", default-features = false }
 oauth2 = "4.4.1"

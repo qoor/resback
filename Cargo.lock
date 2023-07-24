@@ -1639,6 +1639,7 @@ dependencies = [
  "axum_typed_multipart",
  "chrono",
  "dotenvy",
+ "hyper",
  "jsonwebtoken",
  "names",
  "oauth2",
