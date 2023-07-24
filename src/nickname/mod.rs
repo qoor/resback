@@ -8,29 +8,14 @@ pub const ADJECTIVES: &[&str] = &include!("adjectives.in");
 /// List of animals in Korean
 pub const ANIMALS: &[&str] = &include!("animals.in");
 
-/// List of characters in Korean
-pub const CHARACTERS: &[&str] = &include!("characters.in");
-
-/// List of heroes in Korean
-pub const HEROES: &[&str] = &include!("heroes.in");
-
-/// List of monsters in Korean
-pub const MONSTERS: &[&str] = &include!("monsters.in");
-
 /// A noun type for the `Generator`
 pub enum NounType {
     Animal,
-    Character,
-    Hero,
-    Monster,
 }
 
 /// A custom version of `names::Generator`, providing Korean names
 pub struct KoreanGenerator<'a> {
     animal_generator: names::Generator<'a>,
-    character_generator: names::Generator<'a>,
-    hero_generator: names::Generator<'a>,
-    monster_generator: names::Generator<'a>,
 
     rng: ThreadRng,
 }
@@ -60,18 +45,6 @@ impl<'a> KoreanGenerator<'a> {
                 NounType::Animal,
                 names::Name::from(naming),
             ),
-            character_generator: names::Generator::with_noun_type(
-                NounType::Character,
-                names::Name::from(naming),
-            ),
-            hero_generator: names::Generator::with_noun_type(
-                NounType::Hero,
-                names::Name::from(naming),
-            ),
-            monster_generator: names::Generator::with_noun_type(
-                NounType::Monster,
-                names::Name::from(naming),
-            ),
 
             rng: ThreadRng::default(),
         }
@@ -90,9 +63,6 @@ impl<'a> Iterator for KoreanGenerator<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         match self.rng.gen_range(0..4) {
             0 => self.animal_generator.next_pretty(),
-            1 => self.character_generator.next_pretty(),
-            2 => self.hero_generator.next_pretty(),
-            3 => self.monster_generator.next_pretty(),
             _ => None,
         }
     }
@@ -112,9 +82,6 @@ impl<'a> KoreanName<'a> for names::Generator<'a> {
     fn with_noun_type(noun_type: NounType, naming: names::Name) -> names::Generator<'a> {
         match noun_type {
             NounType::Animal => names::Generator::new(ADJECTIVES, ANIMALS, naming),
-            NounType::Character => names::Generator::new(ADJECTIVES, CHARACTERS, naming),
-            NounType::Hero => names::Generator::new(ADJECTIVES, HEROES, names::Name::Plain),
-            NounType::Monster => names::Generator::new(ADJECTIVES, MONSTERS, names::Name::Plain),
         }
     }
 
