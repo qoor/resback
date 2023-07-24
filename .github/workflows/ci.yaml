@@ -18,12 +18,9 @@ jobs:
       mariadb:
         image: mariadb
         env:
-          MARIADB_USER: resback
-          MARIADB_PASSWORD: kEH8A6SipKz0mFRCZ3MPjwOp1F4kfMw
           MARIADB_DATABASE: resback
           MARIADB_ROOT_PASSWORD: root
-          MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: true
-          MARIADB_MYSQL_LOCALHOST_USER: 1
+          MARIADB_MYSQL_LOCALHOST_USER: true
           MARIADB_MYSQL_LOCALHOST_GRANTS: USAGE
         ports:
           - 3306:3306
@@ -52,6 +49,7 @@ jobs:
       - name: Setup database
         run: |
           cargo install --locked sqlx-cli --features mysql || true
+          ln -s .env.ci .env
           sqlx db setup
 
       - name: Run cargo check
