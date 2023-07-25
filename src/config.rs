@@ -24,6 +24,9 @@ pub struct Config {
 
     pub access_token_max_age: i64,
     pub refresh_token_max_age: i64,
+
+    pub aws_region: String,
+    pub s3_bucket: String,
 }
 
 #[derive(Clone)]
@@ -88,6 +91,9 @@ impl Config {
             refresh_token_max_age: get_env_or_panic("REFRESH_TOKEN_MAX_AGE")
                 .parse::<i64>()
                 .unwrap(),
+
+            aws_region: get_env_or_panic("AWS_REGION"),
+            s3_bucket: get_env_or_panic("AWS_S3_BUCKET"),
         }
     }
 }

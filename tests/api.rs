@@ -6,7 +6,7 @@ use tower::ServiceExt;
 
 #[sqlx::test]
 async fn root(pool: Pool<MySql>) {
-    let app = app(&Config::default(), &pool);
+    let app = app(&Config::default(), &pool).await;
 
     let response =
         app.oneshot(Request::builder().uri("/").body(Body::empty()).unwrap()).await.unwrap();

@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "UPDATE normal_users SET nickname = ?, picture = ? WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "ee6e128171048444c65c2f2c9c9e8d0faae0d2483199dac196cd02b8e0c31109"
+}

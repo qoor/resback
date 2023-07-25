@@ -1,7 +1,7 @@
 // Copyright 2023. The resback authors all rights reserved.
 
 use axum::{async_trait, extract::multipart};
-use axum_typed_multipart::{TryFromMultipart, TypedMultipartError};
+use axum_typed_multipart::{FieldData, TempFile, TryFromMultipart, TypedMultipartError};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
@@ -67,6 +67,23 @@ pub struct SeniorSearchSchema {
 #[derive(Debug, Serialize, Clone)]
 pub struct SeniorSearchResultSchema {
     pub seniors: Vec<SeniorUserInfoSchema>,
+}
+
+#[derive(TryFromMultipart)]
+pub struct NormalUserUpdateSchema {
+    pub nickname: String,
+    pub picture: Option<FieldData<TempFile>>,
+}
+
+#[derive(TryFromMultipart)]
+pub struct SeniorUserUpdateSchema {
+    pub nickname: String,
+    pub picture: Option<FieldData<TempFile>>,
+    pub major: String,
+    pub experience_years: i32,
+    pub mentoring_price: i32,
+    pub representative_careers: JsonArray<String>,
+    pub description: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

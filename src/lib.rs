@@ -10,16 +10,15 @@ mod oauth;
 mod schema;
 mod user;
 
-use sqlx::MySql;
-
 use std::sync::Arc;
 
 use axum::{
     middleware,
-    routing::{delete, get, patch, post},
+    routing::{delete, get, patch, post, put},
     Router,
 };
 use oauth::NonStandardClient;
+use sqlx::MySql;
 
 pub use config::Config;
 pub use env::get_env_or_panic;
@@ -35,15 +34,20 @@ pub struct AppState {
     /// Bugs:
     /// * https://github.com/ramosbugs/oauth2-rs/issues/191
     naver_oauth: NonStandardClient,
+    s3: aws_sdk_s3::Client,
 }
 
-pub fn app(config: &Config, pool: &sqlx::Pool<MySql>) -> Router {
+pub async fn app(config: &Config, pool: &sqlx::Pool<MySql>) -> Router {
+    let aws_config = aws_config::load_from_env().await;
+    let s3 = aws_sdk_s3::Client::new(&aws_config);
+
     let app_state = Arc::new(AppState {
         database: pool.clone(),
         config: config.clone(),
         google_oauth: config.google_oauth.to_client(),
         kakao_oauth: config.kakao_oauth.to_client(),
         naver_oauth: config.naver_oauth.to_non_standard_client(),
+        s3,
     });
 
     let auth_layer = middleware::from_fn_with_state(app_state.clone(), jwt::authorize_user);
@@ -60,8 +64,10 @@ pub fn app(config: &Config, pool: &sqlx::Pool<MySql>) -> Router {
             post(handler::users::register_senior_user).get(handler::users::get_seniors),
         )
         .route("/users/senior/:id", get(handler::users::get_senior_user_info))
+        .route("/users/senior/:id", put(handler::users::update_senior_user_profile))
         .route("/users/senior/:id", delete(handler::users::delete_senior_user))
         .route("/users/normal/:id", get(handler::users::get_normal_user_info))
+        .route("/users/normal/:id", put(handler::users::update_normal_user_profile))
         .route("/users/normal/:id", delete(handler::users::delete_normal_user));
 
     Router::new().merge(root_routers).merge(auth_routers).merge(users_routers).with_state(app_state)

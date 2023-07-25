@@ -32,6 +32,8 @@ pub trait User: Sized {
 
     fn refresh_token(&self) -> Option<&str>;
 
+    fn picture(&self) -> &str;
+
     async fn from_id(id: UserId, pool: &sqlx::Pool<MySql>) -> Result<Self>;
 
     async fn update_refresh_token(&self, token: &str, pool: &sqlx::Pool<MySql>) -> Result<&Self>;
@@ -96,6 +98,28 @@ impl NormalUser {
             ErrorResponse { status: "fail", message: "Invalid OAuth user data".to_string() },
         ))
     }
+
+    pub async fn update(
+        &self,
+        update_data: &NormalUserUpdate,
+        pool: &sqlx::Pool<MySql>,
+    ) -> Result<&Self> {
+        sqlx::query!(
+            "UPDATE normal_users SET nickname = ?, picture = ? WHERE id = ?",
+            update_data.nickname,
+            update_data.picture,
+            self.id
+        )
+        .execute(pool)
+        .await
+        .map(|_| self)
+        .map_err(|err| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                ErrorResponse { status: "error", message: format!("Database error: {:?}", err) },
+            )
+        })
+    }
 }
 
 #[async_trait]
@@ -106,6 +130,10 @@ impl User for NormalUser {
 
     fn refresh_token(&self) -> Option<&str> {
         self.refresh_token.as_deref()
+    }
+
+    fn picture(&self) -> &str {
+        &self.picture
     }
 
     async fn from_id(id: UserId, pool: &sqlx::Pool<MySql>) -> Result<Self> {
@@ -128,14 +156,13 @@ impl User for NormalUser {
         sqlx::query!("UPDATE normal_users SET refresh_token = ? WHERE id = ?", token, self.id)
             .execute(pool)
             .await
+            .map(|_| self)
             .map_err(|err| {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     ErrorResponse { status: "error", message: format!("Database error: {}", err) },
                 )
-            })?;
-
-        Ok(self)
+            })
     }
 
     async fn delete(id: UserId, pool: &sqlx::Pool<MySql>) -> Result<UserId> {
@@ -168,6 +195,11 @@ impl From<NormalUser> for NormalUserInfoSchema {
             picture: value.picture,
         }
     }
+}
+
+pub struct NormalUserUpdate {
+    pub picture: String,
+    pub nickname: String,
 }
 
 #[derive(Debug, sqlx::FromRow, Serialize, Deserialize, Clone)]
@@ -342,6 +374,34 @@ impl SeniorUser {
 
         Ok(SeniorSearchResultSchema { seniors })
     }
+
+    pub async fn update(
+        &self,
+        update_data: &SeniorUserUpdate,
+        pool: &sqlx::Pool<MySql>,
+    ) -> Result<&Self> {
+        sqlx::query!("UPDATE senior_users SET nickname = ?, picture = ?, major = ?, experience_years = ?, mentoring_price = ?, representative_careers = ?, description = ? WHERE id = ?",
+                                  update_data.nickname,
+                                  update_data.picture,
+                                  update_data.major,
+                                  update_data.experience_years,
+                                  update_data.mentoring_price,
+                                  update_data.representative_careers.to_string(),
+                                  update_data.description,
+                     self.id)
+            .execute(pool)
+            .await
+            .map(|_| self)
+            .map_err(|err| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    ErrorResponse {
+                        status: "error",
+                        message: format!("Database error: {:?}", err)
+                    }
+                )
+            })
+    }
 }
 
 #[async_trait]
@@ -352,6 +412,10 @@ impl User for SeniorUser {
 
     fn refresh_token(&self) -> Option<&str> {
         self.refresh_token.as_deref()
+    }
+
+    fn picture(&self) -> &str {
+        &self.picture
     }
 
     async fn from_id(id: UserId, pool: &sqlx::Pool<MySql>) -> Result<Self> {
@@ -374,14 +438,13 @@ impl User for SeniorUser {
         sqlx::query!("UPDATE senior_users SET refresh_token = ? WHERE id = ?", token, self.id)
             .execute(pool)
             .await
+            .map(|_| self)
             .map_err(|err| {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     ErrorResponse { status: "error", message: format!("Database error: {}", err) },
                 )
-            })?;
-
-        Ok(self)
+            })
     }
 
     async fn delete(id: UserId, pool: &sqlx::Pool<MySql>) -> Result<UserId> {
@@ -419,4 +482,14 @@ impl From<SeniorUser> for SeniorUserInfoSchema {
             description: value.description,
         }
     }
+}
+
+pub struct SeniorUserUpdate {
+    pub nickname: String,
+    pub picture: String,
+    pub major: String,
+    pub experience_years: i32,
+    pub mentoring_price: i32,
+    pub representative_careers: JsonArray<String>,
+    pub description: String,
 }

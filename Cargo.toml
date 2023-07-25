@@ -15,6 +15,8 @@ publish = false
 
 [dependencies]
 argon2 = "0.5.1"
+aws-config = "0.55.3"
+aws-sdk-s3 = "0.28.0"
 axum = { version = "0.6.19", features = ["headers"] }
 axum-extra = { version = "0.7.5", features = ["cookie"] }
 axum_typed_multipart = "0.5.1"

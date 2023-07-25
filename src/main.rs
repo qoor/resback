@@ -42,7 +42,7 @@ async fn main() {
         std::process::exit(1);
     }
 
-    let app = resback::app(&config, &pool);
+    let app = resback::app(&config, &pool).await;
 
     print_server_started(&config.address);
     Server::bind(&config.address.parse().unwrap()).serve(app.into_make_service()).await.unwrap();
