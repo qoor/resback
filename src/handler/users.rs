@@ -1,4 +1,4 @@
-use std::{path, sync::Arc};
+use std::sync::Arc;
 
 use aws_sdk_s3::primitives::ByteStream;
 use axum::{
@@ -6,7 +6,6 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-
 use axum_typed_multipart::TypedMultipart;
 use hyper::StatusCode;
 
@@ -49,8 +48,19 @@ pub async fn update_senior_user_profile(
     let picture = match update_data.picture {
         Some(picture) => {
             let picture_dir = "uploaded-profile-image/senior";
-            let temp_file_path = path::Path::new("/tmp").join(id.to_string());
+            let temp_dir = std::env::temp_dir().join("senior");
 
+            std::fs::create_dir(&temp_dir).map_err(|_| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    ErrorResponse {
+                        status: "error",
+                        message: "Failed to create temporary directory for the picture".to_string(),
+                    },
+                )
+            })?;
+
+            let temp_file_path = temp_dir.join(id.to_string());
             let _temp_file =
                 picture.contents.persist(&temp_file_path, true).await.map_err(|err| {
                     (
@@ -63,6 +73,8 @@ pub async fn update_senior_user_profile(
                 })?;
 
             let body = ByteStream::from_path(&temp_file_path).await.map_err(|err| {
+                let _ = std::fs::remove_file(&temp_file_path);
+
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     ErrorResponse {
@@ -74,6 +86,7 @@ pub async fn update_senior_user_profile(
                     },
                 )
             })?;
+            let _ = std::fs::remove_file(&temp_file_path);
             let _picture_upload_result = data
                 .s3
                 .put_object()
@@ -140,7 +153,19 @@ pub async fn update_normal_user_profile(
     let picture = match update_data.picture {
         Some(picture) => {
             let picture_dir = "uploaded-profile-image/normal";
-            let temp_file_path = path::Path::new("/tmp").join(id.to_string());
+            let temp_dir = std::env::temp_dir().join("normal");
+
+            std::fs::create_dir(&temp_dir).map_err(|_| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    ErrorResponse {
+                        status: "error",
+                        message: "Failed to create temporary directory for the picture".to_string(),
+                    },
+                )
+            })?;
+
+            let temp_file_path = temp_dir.join(id.to_string());
 
             let _temp_file =
                 picture.contents.persist(&temp_file_path, true).await.map_err(|err| {
@@ -154,6 +179,7 @@ pub async fn update_normal_user_profile(
                 })?;
 
             let body = ByteStream::from_path(&temp_file_path).await.map_err(|err| {
+                let _ = std::fs::remove_file(&temp_file_path);
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     ErrorResponse {
@@ -165,6 +191,7 @@ pub async fn update_normal_user_profile(
                     },
                 )
             })?;
+            let _ = std::fs::remove_file(&temp_file_path);
             let _picture_upload_result = data
                 .s3
                 .put_object()
