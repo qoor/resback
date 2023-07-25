@@ -151,7 +151,7 @@ pub async fn logout_user(
             message: "Failed to get login information".to_string(),
         }),
     ))?;
-    let refresh_token = cookie_jar.get(REFRESH_TOKEN_COOKIE).ok_or((
+    let _refresh_token = cookie_jar.get(REFRESH_TOKEN_COOKIE).ok_or((
         StatusCode::INTERNAL_SERVER_ERROR,
         (crate::error::ErrorResponse {
             status: "error",
@@ -173,8 +173,11 @@ pub async fn logout_user(
             },
         )
     })?;
+
+    let access_token = Cookie::build(ACCESS_TOKEN_COOKIE, "").path("/").finish();
+    let refresh_token = Cookie::build(REFRESH_TOKEN_COOKIE, "").path("/").finish();
     Ok((
-        cookie_jar.clone().remove(access_token.clone()).remove(refresh_token.clone()),
+        cookie_jar.remove(access_token).remove(refresh_token),
         Json(UserIdentificationSchema { user_type, id }),
     ))
 }
