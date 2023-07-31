@@ -16,10 +16,12 @@ use crate::{
     error::ErrorResponse,
     schema::{
         NormalUserInfoSchema, NormalUserUpdateSchema, SeniorRegisterSchema, SeniorSearchSchema,
-        SeniorUserInfoSchema, SeniorUserUpdateSchema, UserIdentificationSchema,
+        SeniorUserInfoSchema, SeniorUserScheduleSchema, SeniorUserUpdateSchema,
+        UserIdentificationSchema,
     },
     user::{
         account::{NormalUser, NormalUserUpdate, SeniorUser, SeniorUserUpdate, User, UserId},
+        mentoring::MentoringSchedule,
         UserType,
     },
     AppState, Result,
@@ -254,4 +256,16 @@ pub async fn get_seniors(
     State(data): State<Arc<AppState>>,
 ) -> crate::Result<impl IntoResponse> {
     Ok(Json(SeniorUser::get_all(search_info, &data.database).await?))
+}
+
+pub async fn get_senior_mentoring_schedule(
+    Path(id): Path<UserId>,
+    State(data): State<Arc<AppState>>,
+) -> crate::Result<impl IntoResponse> {
+    let user = SeniorUser::from_id(id, &data.database).await?;
+    let user_schedule: SeniorUserScheduleSchema =
+        MentoringSchedule::from_senior_user(&user, &data.database)
+            .await
+            .map(|schedule| schedule.into())?;
+    Ok(Json(user_schedule))
 }

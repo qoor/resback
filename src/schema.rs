@@ -6,7 +6,11 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
     oauth::OAuthProvider,
-    user::{account::UserId, UserType},
+    user::{
+        account::UserId,
+        mentoring::{MentoringSchedule, MentoringTime},
+        UserType,
+    },
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, TryFromMultipart)]
@@ -117,5 +121,17 @@ impl<T: DeserializeOwned> axum_typed_multipart::TryFromField for JsonArray<T> {
             field_name,
             wanted_type: "JSON array".to_string(),
         })?)
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct SeniorUserScheduleSchema {
+    pub id: UserId,
+    pub schedule: Vec<MentoringTime>,
+}
+
+impl From<MentoringSchedule> for SeniorUserScheduleSchema {
+    fn from(value: MentoringSchedule) -> Self {
+        Self { id: value.senior_id(), schedule: value.times().to_vec() }
     }
 }

@@ -68,7 +68,8 @@ pub async fn app(config: &Config, pool: &sqlx::Pool<MySql>) -> Router {
         .route("/users/senior/:id", delete(handler::users::delete_senior_user))
         .route("/users/normal/:id", get(handler::users::get_normal_user_info))
         .route("/users/normal/:id", put(handler::users::update_normal_user_profile))
-        .route("/users/normal/:id", delete(handler::users::delete_normal_user));
+        .route("/users/normal/:id", delete(handler::users::delete_normal_user))
+        .route("/users/senior/:id/mentoring", get(handler::users::get_senior_mentoring_schedule));
 
     Router::new().merge(root_routers).merge(auth_routers).merge(users_routers).with_state(app_state)
 }
