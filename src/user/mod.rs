@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::oauth::OAuthProvider;
 
 pub mod account;
+pub mod mentoring;
 pub mod picture;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
