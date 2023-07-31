@@ -1,6 +1,6 @@
 // Copyright 2023. The resback authors all rights reserved.
 
-use rand::{rngs::ThreadRng, Rng};
+use rand::rngs::ThreadRng;
 
 /// List of Korean adjective words
 pub const ADJECTIVES: &[&str] = &include!("adjectives.in");
@@ -17,7 +17,7 @@ pub enum NounType {
 pub struct KoreanGenerator<'a> {
     animal_generator: names::Generator<'a>,
 
-    rng: ThreadRng,
+    _rng: ThreadRng,
 }
 
 /// A naming strategy for `Generator`
@@ -46,7 +46,7 @@ impl<'a> KoreanGenerator<'a> {
                 names::Name::from(naming),
             ),
 
-            rng: ThreadRng::default(),
+            _rng: ThreadRng::default(),
         }
     }
 }
@@ -61,10 +61,7 @@ impl<'a> Iterator for KoreanGenerator<'a> {
     type Item = String;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.rng.gen_range(0..4) {
-            0 => self.animal_generator.next_pretty(),
-            _ => None,
-        }
+        self.animal_generator.next_pretty()
     }
 }
 
