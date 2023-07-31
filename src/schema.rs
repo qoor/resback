@@ -61,6 +61,9 @@ pub struct SeniorUserInfoSchema {
     pub mentoring_price: i32,
     pub representative_careers: JsonArray<String>,
     pub description: String,
+    pub mentoring_method: u32,
+    pub mentoring_status: bool,
+    pub mentoring_always_on: bool,
 }
 
 #[derive(Debug, Deserialize, Clone)]
