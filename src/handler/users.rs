@@ -8,6 +8,7 @@ use axum::{
 };
 use axum_typed_multipart::TypedMultipart;
 use hyper::StatusCode;
+use tokio::{fs, io};
 
 use crate::{
     error::ErrorResponse,
@@ -50,15 +51,22 @@ pub async fn update_senior_user_profile(
             let picture_dir = "uploaded-profile-image/senior";
             let temp_dir = std::env::temp_dir().join("senior");
 
-            std::fs::create_dir(&temp_dir).map_err(|_| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    ErrorResponse {
-                        status: "error",
-                        message: "Failed to create temporary directory for the picture".to_string(),
-                    },
-                )
-            })?;
+            fs::create_dir(&temp_dir)
+                .await
+                .or_else(|error| match error.kind() {
+                    io::ErrorKind::AlreadyExists => Ok(()),
+                    _ => Err(error),
+                })
+                .map_err(|_| {
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        ErrorResponse {
+                            status: "error",
+                            message: "Failed to create temporary directory for the picture"
+                                .to_string(),
+                        },
+                    )
+                })?;
 
             let temp_file_path = temp_dir.join(id.to_string());
             let _temp_file =
@@ -86,7 +94,6 @@ pub async fn update_senior_user_profile(
                     },
                 )
             })?;
-            let _ = std::fs::remove_file(&temp_file_path);
             let _picture_upload_result = data
                 .s3
                 .put_object()
@@ -104,6 +111,7 @@ pub async fn update_senior_user_profile(
                         },
                     )
                 })?;
+            let _ = fs::remove_file(&temp_file_path).await;
 
             format!(
                 "https://{}.s3.{}.amazonaws.com/{}/{}",
@@ -155,15 +163,22 @@ pub async fn update_normal_user_profile(
             let picture_dir = "uploaded-profile-image/normal";
             let temp_dir = std::env::temp_dir().join("normal");
 
-            std::fs::create_dir(&temp_dir).map_err(|_| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    ErrorResponse {
-                        status: "error",
-                        message: "Failed to create temporary directory for the picture".to_string(),
-                    },
-                )
-            })?;
+            fs::create_dir(&temp_dir)
+                .await
+                .or_else(|error| match error.kind() {
+                    io::ErrorKind::AlreadyExists => Ok(()),
+                    _ => Err(error),
+                })
+                .map_err(|_| {
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        ErrorResponse {
+                            status: "error",
+                            message: "Failed to create temporary directory for the picture"
+                                .to_string(),
+                        },
+                    )
+                })?;
 
             let temp_file_path = temp_dir.join(id.to_string());
 
@@ -191,7 +206,6 @@ pub async fn update_normal_user_profile(
                     },
                 )
             })?;
-            let _ = std::fs::remove_file(&temp_file_path);
             let _picture_upload_result = data
                 .s3
                 .put_object()
@@ -209,6 +223,7 @@ pub async fn update_normal_user_profile(
                         },
                     )
                 })?;
+            let _ = fs::remove_file(&temp_file_path).await;
 
             format!(
                 "https://{}.s3.{}.amazonaws.com/{}/{}",
