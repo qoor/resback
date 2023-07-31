@@ -1,3 +1,5 @@
+// Copyright 2023. The resback authors all rights reserved.
+
 use rand::seq::SliceRandom;
 
 use super::UserType;

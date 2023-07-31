@@ -1,3 +1,5 @@
+// Copyright 2023. The resback authors all rights reserved.
+
 use std::sync::Arc;
 
 use aws_sdk_s3::primitives::ByteStream;
