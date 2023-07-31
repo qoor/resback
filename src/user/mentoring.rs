@@ -131,6 +131,7 @@ impl MentoringSchedule {
     }
 
     pub async fn from_update_schema(
+        senior_id: UserId,
         update_data: &SeniorUserScheduleUpdateSchema,
         pool: &sqlx::Pool<MySql>,
     ) -> Result<Self> {
@@ -144,7 +145,7 @@ impl MentoringSchedule {
                 .collect()
         })?;
 
-        Ok(Self { senior_id: update_data.id, schedule })
+        Ok(Self { senior_id, schedule })
     }
 
     pub async fn update(
@@ -152,7 +153,7 @@ impl MentoringSchedule {
         update_data: &SeniorUserScheduleUpdateSchema,
         pool: &sqlx::Pool<MySql>,
     ) -> Result<Self> {
-        let new_schedule = Self::from_update_schema(update_data, pool).await?;
+        let new_schedule = Self::from_update_schema(self.senior_id, update_data, pool).await?;
         let user = SeniorUser::from_id(self.senior_id, pool).await?;
 
         sqlx::query!("DELETE FROM mentoring_schedule WHERE senior_id = ?", user.id())

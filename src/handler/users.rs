@@ -275,7 +275,7 @@ pub async fn update_senior_mentoring_schedule(
     State(data): State<Arc<AppState>>,
     TypedMultipart(update_data): TypedMultipart<SeniorUserScheduleUpdateSchema>,
 ) -> crate::Result<impl IntoResponse> {
-    let user = SeniorUser::from_id(update_data.id, &data.database).await?;
+    let user = SeniorUser::from_id(id, &data.database).await?;
     let schedule = MentoringSchedule::from_senior_user(&user, &data.database).await?;
     Ok(Json(
         schedule

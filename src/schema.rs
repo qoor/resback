@@ -138,7 +138,6 @@ impl From<MentoringSchedule> for SeniorUserScheduleSchema {
 
 #[derive(TryFromMultipart, Debug)]
 pub struct SeniorUserScheduleUpdateSchema {
-    pub id: UserId,
     pub schedule: JsonArray<u32>,
     pub status: bool,
     pub always_on: bool,

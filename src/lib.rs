@@ -74,8 +74,15 @@ pub async fn app(config: &Config, pool: &sqlx::Pool<MySql>) -> Router {
             "/users/senior/:id/mentoring",
             put(handler::users::update_senior_mentoring_schedule),
         );
+    let mentoring_routers =
+        Router::new().route("/mentoring/time", get(handler::mentoring::get_time_table));
 
-    Router::new().merge(root_routers).merge(auth_routers).merge(users_routers).with_state(app_state)
+    Router::new()
+        .merge(root_routers)
+        .merge(auth_routers)
+        .merge(users_routers)
+        .merge(mentoring_routers)
+        .with_state(app_state)
 }
 
 pub fn about() -> String {
