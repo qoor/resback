@@ -20,7 +20,7 @@ use crate::{
 };
 use crate::{oauth::OAuthProvider, Result};
 
-use super::OAuthUserData;
+use super::{mentoring::MentoringMethodKind, OAuthUserData};
 
 pub type UserId = u64;
 
@@ -216,6 +216,9 @@ pub struct SeniorUser {
     mentoring_price: i32,
     representative_careers: String,
     description: String,
+    mentoring_method_id: MentoringMethodKind,
+    mentoring_status: bool,
+    mentoring_always_on: bool,
     refresh_token: Option<String>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
@@ -253,7 +256,7 @@ impl SeniorUser {
         })
         .map(|hash| hash.to_string())?;
 
-        let nickname = KoreanGenerator::new(nickname::Naming::Plain).next();
+        let nickname = KoreanGenerator::new(nickname::Naming::Plain).next().unwrap();
         let user = sqlx::query!(
             "INSERT INTO senior_users (email, password, name, phone, nickname, picture, major, experience_years, mentoring_price, representative_careers, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             register_data.email,
