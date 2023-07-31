@@ -4,7 +4,9 @@ use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
 use sqlx::MySql;
 
-use crate::{error::ErrorResponse, user::account::User, Result};
+use crate::{
+    error::ErrorResponse, schema::SeniorUserScheduleUpdateSchema, user::account::User, Result,
+};
 
 use super::account::{SeniorUser, UserId};
 
@@ -114,7 +116,7 @@ impl From<MentoringScheduleRow> for MentoringTime {
 
 pub struct MentoringSchedule {
     senior_id: UserId,
-    times: Vec<MentoringTime>,
+    schedule: Vec<MentoringTime>,
 }
 
 impl MentoringSchedule {
@@ -124,8 +126,68 @@ impl MentoringSchedule {
     ) -> Result<Self> {
         MentoringScheduleRow::from_senior_user(senior_user, pool).await.map(|rows| Self {
             senior_id: senior_user.id(),
-            times: rows.into_iter().map(|row| row.into()).collect(),
+            schedule: rows.into_iter().map(|row| row.into()).collect(),
         })
+    }
+
+    pub async fn from_update_schema(
+        update_data: &SeniorUserScheduleUpdateSchema,
+        pool: &sqlx::Pool<MySql>,
+    ) -> Result<Self> {
+        let schedule: Vec<MentoringTime> = MentoringTime::get_all(pool).await.map(|times| {
+            times
+                .into_iter()
+                .filter_map(|time| match update_data.schedule.0.contains(&time.hour) {
+                    true => Some(time),
+                    false => None,
+                })
+                .collect()
+        })?;
+
+        Ok(Self { senior_id: update_data.id, schedule })
+    }
+
+    pub async fn update(
+        self,
+        update_data: &SeniorUserScheduleUpdateSchema,
+        pool: &sqlx::Pool<MySql>,
+    ) -> Result<Self> {
+        let new_schedule = Self::from_update_schema(update_data, pool).await?;
+        let user = SeniorUser::from_id(self.senior_id, pool).await?;
+
+        sqlx::query!("DELETE FROM mentoring_schedule WHERE senior_id = ?", user.id())
+            .execute(pool)
+            .await
+            .map_err(|err| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    ErrorResponse {
+                        status: "error",
+                        message: format!("Failed to delete previous user schedule: {}", err),
+                    },
+                )
+            })?;
+
+        for time in &new_schedule.schedule {
+            sqlx::query!(
+                "INSERT INTO mentoring_schedule (senior_id, time_id) VALUES (?, ?)",
+                user.id(),
+                time.id
+            )
+            .execute(pool)
+            .await
+            .map_err(|err| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    ErrorResponse {
+                        status: "error",
+                        message: format!("Failed to insert new user schedule: {}", err),
+                    },
+                )
+            })?;
+        }
+
+        Ok(new_schedule)
     }
 
     pub fn senior_id(&self) -> UserId {
@@ -133,6 +195,6 @@ impl MentoringSchedule {
     }
 
     pub fn times(&self) -> &Vec<MentoringTime> {
-        &self.times
+        &self.schedule
     }
 }

@@ -16,8 +16,8 @@ use crate::{
     error::ErrorResponse,
     schema::{
         NormalUserInfoSchema, NormalUserUpdateSchema, SeniorRegisterSchema, SeniorSearchSchema,
-        SeniorUserInfoSchema, SeniorUserScheduleSchema, SeniorUserUpdateSchema,
-        UserIdentificationSchema,
+        SeniorUserInfoSchema, SeniorUserScheduleSchema, SeniorUserScheduleUpdateSchema,
+        SeniorUserUpdateSchema, UserIdentificationSchema,
     },
     user::{
         account::{NormalUser, NormalUserUpdate, SeniorUser, SeniorUserUpdate, User, UserId},
@@ -268,4 +268,19 @@ pub async fn get_senior_mentoring_schedule(
             .await
             .map(|schedule| schedule.into())?;
     Ok(Json(user_schedule))
+}
+
+pub async fn update_senior_mentoring_schedule(
+    Path(id): Path<UserId>,
+    State(data): State<Arc<AppState>>,
+    TypedMultipart(update_data): TypedMultipart<SeniorUserScheduleUpdateSchema>,
+) -> crate::Result<impl IntoResponse> {
+    let user = SeniorUser::from_id(update_data.id, &data.database).await?;
+    let schedule = MentoringSchedule::from_senior_user(&user, &data.database).await?;
+    Ok(Json(
+        schedule
+            .update(&update_data, &data.database)
+            .await
+            .map(|_| UserIdentificationSchema { user_type: UserType::SeniorUser, id })?,
+    ))
 }
