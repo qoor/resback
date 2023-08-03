@@ -8,7 +8,7 @@ use crate::{
     oauth::OAuthProvider,
     user::{
         account::UserId,
-        mentoring::{MentoringSchedule, MentoringTime},
+        mentoring::{MentoringMethodKind, MentoringSchedule, MentoringTime},
         UserType,
     },
 };
@@ -90,6 +90,9 @@ pub struct SeniorUserUpdateSchema {
     pub experience_years: i32,
     pub mentoring_price: i32,
     pub representative_careers: JsonArray<String>,
+    pub mentoring_method_id: MentoringMethodKind,
+    pub mentoring_status: bool,
+    pub mentoring_always_on: bool,
     pub description: String,
 }
 

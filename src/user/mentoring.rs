@@ -1,5 +1,10 @@
 // Copyright 2023. The resback authors all rights reserved.
 
+use std::fmt;
+use std::str::FromStr;
+
+use axum::{async_trait, extract::multipart};
+use axum_typed_multipart::TypedMultipartError;
 use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
 use sqlx::MySql;
@@ -16,6 +21,45 @@ use super::account::{SeniorUser, UserId};
 pub enum MentoringMethodKind {
     VideoCall = 1,
     VoiceCall = 2,
+}
+
+impl fmt::Display for MentoringMethodKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match *self {
+            MentoringMethodKind::VideoCall => "video_call",
+            MentoringMethodKind::VoiceCall => "voice_call",
+        };
+
+        write!(f, "{}", s)
+    }
+}
+
+impl FromStr for MentoringMethodKind {
+    type Err = String;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
+            "video_call" => Ok(MentoringMethodKind::VideoCall),
+            "voice_call" => Ok(MentoringMethodKind::VoiceCall),
+            _ => Err("Invalid mentoring method".to_string()),
+        }
+    }
+}
+
+#[async_trait]
+impl axum_typed_multipart::TryFromField for MentoringMethodKind {
+    async fn try_from_field(
+        field: multipart::Field<'_>,
+    ) -> std::result::Result<Self, TypedMultipartError> {
+        let field_name = field.name().unwrap_or("{unknown}").to_string();
+        let field_text = field.text().await?;
+
+        MentoringMethodKind::from_str(&field_text).map_err(|_| {
+            TypedMultipartError::WrongFieldType {
+                field_name,
+                wanted_type: "MentoringMethodKind".to_string(),
+            }
+        })
+    }
 }
 
 #[derive(sqlx::FromRow, Serialize, Clone, Debug)]

@@ -14,7 +14,7 @@ use crate::{
     nickname::{self, KoreanGenerator},
     schema::{
         JsonArray, NormalUserInfoSchema, SeniorRegisterSchema, SeniorSearchResultSchema,
-        SeniorSearchSchema, SeniorUserInfoSchema,
+        SeniorSearchSchema, SeniorUserInfoSchema, SeniorUserUpdateSchema,
     },
     user::{picture::get_random_user_picture_url, UserType},
 };
@@ -383,27 +383,40 @@ impl SeniorUser {
         update_data: &SeniorUserUpdate,
         pool: &sqlx::Pool<MySql>,
     ) -> Result<&Self> {
-        sqlx::query!("UPDATE senior_users SET nickname = ?, picture = ?, major = ?, experience_years = ?, mentoring_price = ?, representative_careers = ?, description = ? WHERE id = ?",
-                                  update_data.nickname,
-                                  update_data.picture,
-                                  update_data.major,
-                                  update_data.experience_years,
-                                  update_data.mentoring_price,
-                                  update_data.representative_careers.to_string(),
-                                  update_data.description,
-                     self.id)
-            .execute(pool)
-            .await
-            .map(|_| self)
-            .map_err(|err| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    ErrorResponse {
-                        status: "error",
-                        message: format!("Database error: {:?}", err)
-                    }
-                )
-            })
+        sqlx::query!(
+            r#"UPDATE senior_users SET
+nickname = ?,
+picture = ?,
+major = ?,
+experience_years = ?,
+mentoring_price = ?,
+representative_careers = ?,
+description = ?,
+mentoring_method_id = ?,
+mentoring_status = ?,
+mentoring_always_on = ?
+WHERE id = ?"#,
+            update_data.nickname,
+            update_data.picture,
+            update_data.major,
+            update_data.experience_years,
+            update_data.mentoring_price,
+            update_data.representative_careers.to_string(),
+            update_data.description,
+            update_data.mentoring_method_id,
+            update_data.mentoring_status,
+            update_data.mentoring_always_on,
+            self.id
+        )
+        .execute(pool)
+        .await
+        .map(|_| self)
+        .map_err(|err| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                ErrorResponse { status: "error", message: format!("Database error: {:?}", err) },
+            )
+        })
     }
 }
 
@@ -498,4 +511,7 @@ pub struct SeniorUserUpdate {
     pub mentoring_price: i32,
     pub representative_careers: JsonArray<String>,
     pub description: String,
+    pub mentoring_method_id: MentoringMethodKind,
+    pub mentoring_status: bool,
+    pub mentoring_always_on: bool,
 }
