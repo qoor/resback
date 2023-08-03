@@ -45,6 +45,18 @@ impl FromStr for MentoringMethodKind {
     }
 }
 
+impl TryFrom<u32> for MentoringMethodKind {
+    type Error = String;
+
+    fn try_from(value: u32) -> std::result::Result<Self, Self::Error> {
+        match value {
+            1 => Ok(MentoringMethodKind::VideoCall),
+            2 => Ok(MentoringMethodKind::VoiceCall),
+            _ => Err("Invalid mentoring method id".to_string()),
+        }
+    }
+}
+
 #[async_trait]
 impl axum_typed_multipart::TryFromField for MentoringMethodKind {
     async fn try_from_field(

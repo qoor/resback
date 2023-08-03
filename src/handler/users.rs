@@ -20,7 +20,7 @@ use crate::{
     },
     user::{
         account::{NormalUser, NormalUserUpdate, SeniorUser, SeniorUserUpdate, User, UserId},
-        mentoring::MentoringSchedule,
+        mentoring::{MentoringMethodKind, MentoringSchedule},
         UserType,
     },
     AppState, Result,
@@ -76,12 +76,9 @@ pub async fn update_senior_user_profile(
         mentoring_price: update_data.mentoring_price,
         representative_careers: update_data.representative_careers,
         description: update_data.description,
-        mentoring_method_id: update_data.mentoring_method,
-        mentoring_status: update_data.mentoring_status,
-        mentoring_always_on: update_data.mentoring_always_on,
     };
 
-    user.update(&update_data, &data.database).await.map(|user| {
+    user.update_profile(&update_data, &data.database).await.map(|user| {
         Json(UserIdentificationSchema { user_type: UserType::SeniorUser, id: user.id() })
     })
 }
@@ -131,7 +128,7 @@ pub async fn update_normal_user_profile(
 
     let update_data = NormalUserUpdate { nickname: update_data.nickname, picture: picture_url };
 
-    user.update(&update_data, &data.database).await.map(|user| {
+    user.update_profile(&update_data, &data.database).await.map(|user| {
         Json(UserIdentificationSchema { user_type: UserType::NormalUser, id: user.id() })
     })
 }
@@ -171,12 +168,16 @@ pub async fn update_senior_mentoring_schedule(
 ) -> crate::Result<impl IntoResponse> {
     let user = SeniorUser::from_id(id, &data.database).await?;
     let schedule = MentoringSchedule::from_senior_user(&user, &data.database).await?;
-    Ok(Json(
-        schedule
-            .update(&update_data, &data.database)
-            .await
-            .map(|_| UserIdentificationSchema { user_type: UserType::SeniorUser, id })?,
-    ))
+    let method: MentoringMethodKind = update_data
+        .method
+        .try_into()
+        .map_err(|err| (StatusCode::BAD_REQUEST, ErrorResponse { status: "fail", message: err }))?;
+
+    schedule.update(&update_data, &data.database).await?;
+    user.update_mentoring_data(&method, update_data.status, update_data.always_on, &data.database)
+        .await?;
+
+    Ok(Json(UserIdentificationSchema { user_type: UserType::SeniorUser, id }))
 }
 
 async fn get_user_picture_paths(

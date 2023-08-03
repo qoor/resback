@@ -90,9 +90,6 @@ pub struct SeniorUserUpdateSchema {
     pub experience_years: i32,
     pub mentoring_price: i32,
     pub representative_careers: JsonArray<String>,
-    pub mentoring_method: MentoringMethodKind,
-    pub mentoring_status: bool,
-    pub mentoring_always_on: bool,
     pub description: String,
 }
 
@@ -145,6 +142,7 @@ impl From<MentoringSchedule> for SeniorUserScheduleSchema {
 #[derive(TryFromMultipart, Debug)]
 pub struct SeniorUserScheduleUpdateSchema {
     pub schedule: JsonArray<u32>,
+    pub method: u32,
     pub status: bool,
     pub always_on: bool,
 }

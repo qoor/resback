@@ -99,7 +99,7 @@ impl NormalUser {
         ))
     }
 
-    pub async fn update(
+    pub async fn update_profile(
         &self,
         update_data: &NormalUserUpdate,
         pool: &sqlx::Pool<MySql>,
@@ -378,7 +378,7 @@ impl SeniorUser {
         Ok(SeniorSearchResultSchema { seniors })
     }
 
-    pub async fn update(
+    pub async fn update_profile(
         &self,
         update_data: &SeniorUserUpdate,
         pool: &sqlx::Pool<MySql>,
@@ -391,10 +391,7 @@ major = ?,
 experience_years = ?,
 mentoring_price = ?,
 representative_careers = ?,
-description = ?,
-mentoring_method_id = ?,
-mentoring_status = ?,
-mentoring_always_on = ?
+description = ?
 WHERE id = ?"#,
             update_data.nickname,
             update_data.picture,
@@ -403,9 +400,35 @@ WHERE id = ?"#,
             update_data.mentoring_price,
             update_data.representative_careers.to_string(),
             update_data.description,
-            update_data.mentoring_method_id,
-            update_data.mentoring_status,
-            update_data.mentoring_always_on,
+            self.id
+        )
+        .execute(pool)
+        .await
+        .map(|_| self)
+        .map_err(|err| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                ErrorResponse { status: "error", message: format!("Database error: {:?}", err) },
+            )
+        })
+    }
+
+    pub async fn update_mentoring_data(
+        &self,
+        method: &MentoringMethodKind,
+        status: bool,
+        always_on: bool,
+        pool: &sqlx::Pool<MySql>,
+    ) -> Result<&Self> {
+        sqlx::query!(
+            r#"UPDATE senior_users SET
+mentoring_method_id = ?,
+mentoring_status = ?,
+mentoring_always_on = ?
+WHERE id = ?"#,
+            method,
+            status,
+            always_on,
             self.id
         )
         .execute(pool)
@@ -511,7 +534,4 @@ pub struct SeniorUserUpdate {
     pub mentoring_price: i32,
     pub representative_careers: JsonArray<String>,
     pub description: String,
-    pub mentoring_method_id: MentoringMethodKind,
-    pub mentoring_status: bool,
-    pub mentoring_always_on: bool,
 }
