@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "INSERT INTO mentoring_schedule (senior_id, time_id) VALUES (?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "0acc8a20efbaf43926d06c6d0b3826fd5c4d8b39a790e52712194f4952266cf8"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "DELETE FROM mentoring_schedule WHERE senior_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "fd95469fc240a30edc78dea5992e4ceb97976710797915486e0f810246e316bf"
+}

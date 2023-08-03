@@ -125,6 +125,36 @@
       },
       {
         "ordinal": 12,
+        "name": "mentoring_method_id",
+        "type_info": {
+          "type": "Long",
+          "flags": "MULTIPLE_KEY | UNSIGNED",
+          "char_set": 63,
+          "max_size": 10
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "mentoring_status",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "",
+          "char_set": 63,
+          "max_size": 1
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "mentoring_always_on",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "",
+          "char_set": 63,
+          "max_size": 1
+        }
+      },
+      {
+        "ordinal": 15,
         "name": "refresh_token",
         "type_info": {
           "type": "VarString",
@@ -134,7 +164,7 @@
         }
       },
       {
-        "ordinal": 13,
+        "ordinal": 16,
         "name": "created_at",
         "type_info": {
           "type": "Timestamp",
@@ -144,7 +174,7 @@
         }
       },
       {
-        "ordinal": 14,
+        "ordinal": 17,
         "name": "updated_at",
         "type_info": {
           "type": "Timestamp",
@@ -170,6 +200,9 @@
       false,
       false,
       false,
+      true,
+      true,
+      true,
       true,
       false,
       false

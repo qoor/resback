@@ -14,8 +14,8 @@ use super::account::{SeniorUser, UserId};
 #[serde(rename_all = "snake_case")]
 #[repr(u32)]
 pub enum MentoringMethodKind {
-    VoiceCall = 1,
-    VideoCall = 2,
+    VideoCall = 1,
+    VoiceCall = 2,
 }
 
 #[derive(sqlx::FromRow, Serialize, Clone, Debug)]
