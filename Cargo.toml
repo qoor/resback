@@ -18,8 +18,8 @@ argon2 = "0.5.1"
 aws-config = "0.55.3"
 aws-sdk-s3 = "0.28.0"
 axum = { version = "0.6.19", features = ["headers"] }
-axum-extra = { version = "0.7.5", features = ["cookie"] }
-axum_typed_multipart = "0.5.1"
+axum-extra = { version = "0.7.6", features = ["cookie"] }
+axum_typed_multipart = "0.5.2"
 chrono = { version = "0.4.26", features = ["serde"] }
 dotenvy = "0.15.7"
 hyper = { version = "0.14.27", features = ["full"] }
@@ -28,10 +28,10 @@ names = { version = "0.14.0", default-features = false }
 oauth2 = "4.4.1"
 rand = "0.8.5"
 reqwest = { version = "0.11.18", features = ["native-tls", "json"] }
-serde = { version = "1.0.175", features = ["derive"] }
-serde_json = "1.0.103"
+serde = { version = "1.0.180", features = ["derive"] }
+serde_json = "1.0.104"
 sqlx = { version = "0.7.1", features = ["runtime-tokio-native-tls", "mysql", "chrono", "time"] }
-time = "0.3.23"
+time = "0.3.25"
 tokio = { version = "1.29.1", features = ["full"] }
 tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
