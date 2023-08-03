@@ -14,7 +14,7 @@ use crate::{
     nickname::{self, KoreanGenerator},
     schema::{
         JsonArray, NormalUserInfoSchema, SeniorRegisterSchema, SeniorSearchResultSchema,
-        SeniorSearchSchema, SeniorUserInfoSchema, SeniorUserUpdateSchema,
+        SeniorSearchSchema, SeniorUserInfoSchema,
     },
     user::{picture::get_random_user_picture_url, UserType},
 };
@@ -496,7 +496,7 @@ impl From<SeniorUser> for SeniorUserInfoSchema {
             representative_careers: JsonArray::from_str(&value.representative_careers)
                 .unwrap_or_default(),
             description: value.description,
-            mentoring_method: value.mentoring_method_id as u32,
+            mentoring_method: value.mentoring_method_id,
             mentoring_status: value.mentoring_status,
             mentoring_always_on: value.mentoring_always_on,
         }

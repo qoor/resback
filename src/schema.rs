@@ -61,7 +61,7 @@ pub struct SeniorUserInfoSchema {
     pub mentoring_price: i32,
     pub representative_careers: JsonArray<String>,
     pub description: String,
-    pub mentoring_method: u32,
+    pub mentoring_method: MentoringMethodKind,
     pub mentoring_status: bool,
     pub mentoring_always_on: bool,
 }
@@ -90,7 +90,7 @@ pub struct SeniorUserUpdateSchema {
     pub experience_years: i32,
     pub mentoring_price: i32,
     pub representative_careers: JsonArray<String>,
-    pub mentoring_method_id: MentoringMethodKind,
+    pub mentoring_method: MentoringMethodKind,
     pub mentoring_status: bool,
     pub mentoring_always_on: bool,
     pub description: String,

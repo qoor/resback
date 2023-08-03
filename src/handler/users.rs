@@ -76,7 +76,7 @@ pub async fn update_senior_user_profile(
         mentoring_price: update_data.mentoring_price,
         representative_careers: update_data.representative_careers,
         description: update_data.description,
-        mentoring_method_id: update_data.mentoring_method_id,
+        mentoring_method_id: update_data.mentoring_method,
         mentoring_status: update_data.mentoring_status,
         mentoring_always_on: update_data.mentoring_always_on,
     };
