@@ -2,7 +2,6 @@
 
 use std::sync::Arc;
 
-use aws_sdk_s3::primitives::ByteStream;
 use axum::{
     extract::{Path, Query, State},
     response::IntoResponse,
@@ -50,89 +49,35 @@ pub async fn update_senior_user_profile(
 ) -> Result<impl IntoResponse> {
     let user = SeniorUser::from_id(id, &data.database).await?;
 
-    let picture = match update_data.picture {
+    let picture_url = match update_data.picture {
         Some(picture) => {
-            let picture_dir = "uploaded-profile-image/senior";
-            let temp_dir = std::env::temp_dir().join("senior");
+            let (temp_path, path_to_push) =
+                get_user_picture_paths(&UserType::SeniorUser, &id).await?;
 
-            fs::create_dir(&temp_dir)
-                .await
-                .or_else(|error| match error.kind() {
-                    io::ErrorKind::AlreadyExists => Ok(()),
-                    _ => Err(error),
-                })
-                .map_err(|_| {
-                    (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        ErrorResponse {
-                            status: "error",
-                            message: "Failed to create temporary directory for the picture"
-                                .to_string(),
-                        },
-                    )
-                })?;
-
-            let temp_file_path = temp_dir.join(id.to_string());
-            let _temp_file =
-                picture.contents.persist(&temp_file_path, true).await.map_err(|err| {
-                    (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        ErrorResponse {
-                            status: "error",
-                            message: format!("Failed to receive picture file: {:?}", err),
-                        },
-                    )
-                })?;
-
-            let body = ByteStream::from_path(&temp_file_path).await.map_err(|err| {
-                let _ = std::fs::remove_file(&temp_file_path);
-
+            picture.contents.persist(&temp_path, true).await.map_err(|err| {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     ErrorResponse {
                         status: "error",
-                        message: format!(
-                            "Failed to get byte stream from temporary picture path: {:?}",
-                            err
-                        ),
+                        message: format!("Failed to receive picture file: {:?}", err),
                     },
                 )
             })?;
-            let _picture_upload_result = data
-                .s3
-                .put_object()
-                .bucket(&data.config.s3_bucket)
-                .key(format!("{}/{}", picture_dir, id))
-                .body(body)
-                .send()
-                .await
-                .map_err(|err| {
-                    (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        ErrorResponse {
-                            status: "error",
-                            message: format!("Failed to upload profile picture: {:?}", err),
-                        },
-                    )
-                })?;
-            let _ = fs::remove_file(&temp_file_path).await;
-
-            format!(
-                "https://{}.s3.{}.amazonaws.com/{}/{}",
-                data.config.s3_bucket, data.config.aws_region, picture_dir, id
-            )
+            data.s3.push_file(&temp_path, &path_to_push).await?
         }
         None => user.picture().to_string(),
     };
+
     let update_data = SeniorUserUpdate {
         nickname: update_data.nickname,
-        picture,
+        picture: picture_url,
         major: update_data.major,
         experience_years: update_data.experience_years,
         mentoring_price: update_data.mentoring_price,
         representative_careers: update_data.representative_careers,
         description: update_data.description,
     };
+
     user.update(&update_data, &data.database).await.map(|user| {
         Json(UserIdentificationSchema { user_type: UserType::SeniorUser, id: user.id() })
     })
@@ -162,81 +107,27 @@ pub async fn update_normal_user_profile(
 ) -> Result<impl IntoResponse> {
     let user = NormalUser::from_id(id, &data.database).await?;
 
-    let picture = match update_data.picture {
+    let picture_url = match update_data.picture {
         Some(picture) => {
-            let picture_dir = "uploaded-profile-image/normal";
-            let temp_dir = std::env::temp_dir().join("normal");
+            let (temp_path, path_to_push) =
+                get_user_picture_paths(&UserType::NormalUser, &id).await?;
 
-            fs::create_dir(&temp_dir)
-                .await
-                .or_else(|error| match error.kind() {
-                    io::ErrorKind::AlreadyExists => Ok(()),
-                    _ => Err(error),
-                })
-                .map_err(|_| {
-                    (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        ErrorResponse {
-                            status: "error",
-                            message: "Failed to create temporary directory for the picture"
-                                .to_string(),
-                        },
-                    )
-                })?;
-
-            let temp_file_path = temp_dir.join(id.to_string());
-
-            let _temp_file =
-                picture.contents.persist(&temp_file_path, true).await.map_err(|err| {
-                    (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        ErrorResponse {
-                            status: "error",
-                            message: format!("Failed to receive picture file: {:?}", err),
-                        },
-                    )
-                })?;
-
-            let body = ByteStream::from_path(&temp_file_path).await.map_err(|err| {
-                let _ = std::fs::remove_file(&temp_file_path);
+            picture.contents.persist(&temp_path, true).await.map_err(|err| {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     ErrorResponse {
                         status: "error",
-                        message: format!(
-                            "Failed to get byte stream from temporary picture path: {:?}",
-                            err
-                        ),
+                        message: format!("Failed to receive picture file: {:?}", err),
                     },
                 )
             })?;
-            let _picture_upload_result = data
-                .s3
-                .put_object()
-                .bucket(&data.config.s3_bucket)
-                .key(format!("{}/{}", picture_dir, id))
-                .body(body)
-                .send()
-                .await
-                .map_err(|err| {
-                    (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        ErrorResponse {
-                            status: "error",
-                            message: format!("Failed to upload profile picture: {:?}", err),
-                        },
-                    )
-                })?;
-            let _ = fs::remove_file(&temp_file_path).await;
-
-            format!(
-                "https://{}.s3.{}.amazonaws.com/{}/{}",
-                data.config.s3_bucket, data.config.aws_region, picture_dir, id
-            )
+            data.s3.push_file(&temp_path, &path_to_push).await?
         }
         None => user.picture().to_string(),
     };
-    let update_data = NormalUserUpdate { nickname: update_data.nickname, picture };
+
+    let update_data = NormalUserUpdate { nickname: update_data.nickname, picture: picture_url };
+
     user.update(&update_data, &data.database).await.map(|user| {
         Json(UserIdentificationSchema { user_type: UserType::NormalUser, id: user.id() })
     })
@@ -283,4 +174,35 @@ pub async fn update_senior_mentoring_schedule(
             .await
             .map(|_| UserIdentificationSchema { user_type: UserType::SeniorUser, id })?,
     ))
+}
+
+async fn get_user_picture_paths(
+    user_type: &UserType,
+    id: &UserId,
+) -> crate::Result<(std::path::PathBuf, String)> {
+    let user_type_str = match user_type {
+        UserType::NormalUser => "normal",
+        UserType::SeniorUser => "senior",
+    };
+    let temp_dir = std::env::temp_dir().join("respec.team").join(user_type_str);
+
+    fs::create_dir_all(&temp_dir)
+        .await
+        .or_else(|error| match error.kind() {
+            io::ErrorKind::AlreadyExists => Ok(()),
+            _ => Err(error),
+        })
+        .map_err(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                ErrorResponse {
+                    status: "error",
+                    message: "Failed to create temporary directory".to_string(),
+                },
+            )
+        })?;
+
+    let s3_path = format!("uploaded-profile-image/{}/{}", user_type_str, id);
+
+    Ok((temp_dir.join(id.to_string()), s3_path))
 }

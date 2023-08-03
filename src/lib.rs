@@ -1,5 +1,6 @@
 // Copyright 2023. The resback authors all rights reserved.
 
+mod aws;
 pub mod config;
 pub mod env;
 mod error;
@@ -34,20 +35,17 @@ pub struct AppState {
     /// Bugs:
     /// * https://github.com/ramosbugs/oauth2-rs/issues/191
     naver_oauth: NonStandardClient,
-    s3: aws_sdk_s3::Client,
+    s3: aws::S3Client,
 }
 
 pub async fn app(config: &Config, pool: &sqlx::Pool<MySql>) -> Router {
-    let aws_config = aws_config::load_from_env().await;
-    let s3 = aws_sdk_s3::Client::new(&aws_config);
-
     let app_state = Arc::new(AppState {
         database: pool.clone(),
         config: config.clone(),
         google_oauth: config.google_oauth.to_client(),
         kakao_oauth: config.kakao_oauth.to_client(),
         naver_oauth: config.naver_oauth.to_non_standard_client(),
-        s3,
+        s3: aws::S3Client::from_env().await,
     });
 
     let auth_layer = middleware::from_fn_with_state(app_state.clone(), jwt::authorize_user);
