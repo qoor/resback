@@ -258,7 +258,19 @@ impl SeniorUser {
 
         let nickname = KoreanGenerator::new(nickname::Naming::Plain).next().unwrap();
         let user = sqlx::query!(
-            "INSERT INTO senior_users (email, password, name, phone, nickname, picture, major, experience_years, mentoring_price, representative_careers, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO senior_users (
+email,
+password,
+name,
+phone,
+nickname,
+picture,
+major,
+experience_years,
+mentoring_price,
+representative_careers,
+description)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             register_data.email,
             hashed_password,
             register_data.name,
@@ -270,10 +282,15 @@ impl SeniorUser {
             register_data.mentoring_price,
             register_data.representative_careers.to_string(),
             register_data.description,
-        ).execute(pool).await.map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, ErrorResponse {
-            status: "error",
-            message: format!("Database error: {}", err)
-        }))?;
+        )
+        .execute(pool)
+        .await
+        .map_err(|err| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                ErrorResponse { status: "error", message: format!("Database error: {}", err) },
+            )
+        })?;
 
         Ok(user.last_insert_id())
     }
@@ -441,6 +458,18 @@ WHERE id = ?"#,
             )
         })
     }
+
+    pub fn mentoring_method(&self) -> MentoringMethodKind {
+        self.mentoring_method_id
+    }
+
+    pub fn mentoring_status(&self) -> bool {
+        self.mentoring_status
+    }
+
+    pub fn mentoring_always_on(&self) -> bool {
+        self.mentoring_always_on
+    }
 }
 
 #[async_trait]
@@ -519,9 +548,6 @@ impl From<SeniorUser> for SeniorUserInfoSchema {
             representative_careers: JsonArray::from_str(&value.representative_careers)
                 .unwrap_or_default(),
             description: value.description,
-            mentoring_method: value.mentoring_method_id,
-            mentoring_status: value.mentoring_status,
-            mentoring_always_on: value.mentoring_always_on,
         }
     }
 }

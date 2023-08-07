@@ -61,9 +61,6 @@ pub struct SeniorUserInfoSchema {
     pub mentoring_price: i32,
     pub representative_careers: JsonArray<String>,
     pub description: String,
-    pub mentoring_method: MentoringMethodKind,
-    pub mentoring_status: bool,
-    pub mentoring_always_on: bool,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -131,11 +128,20 @@ impl<T: DeserializeOwned> axum_typed_multipart::TryFromField for JsonArray<T> {
 pub struct SeniorUserScheduleSchema {
     pub id: UserId,
     pub schedule: Vec<MentoringTime>,
+    pub method: MentoringMethodKind,
+    pub status: bool,
+    pub always_on: bool,
 }
 
 impl From<MentoringSchedule> for SeniorUserScheduleSchema {
     fn from(value: MentoringSchedule) -> Self {
-        Self { id: value.senior_id(), schedule: value.times().to_vec() }
+        Self {
+            id: value.senior_id(),
+            schedule: value.times().to_vec(),
+            method: value.method(),
+            status: value.status(),
+            always_on: value.always_on(),
+        }
     }
 }
 

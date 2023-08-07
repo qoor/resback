@@ -173,6 +173,9 @@ impl From<MentoringScheduleRow> for MentoringTime {
 pub struct MentoringSchedule {
     senior_id: UserId,
     schedule: Vec<MentoringTime>,
+    method: MentoringMethodKind,
+    status: bool,
+    always_on: bool,
 }
 
 impl MentoringSchedule {
@@ -183,6 +186,9 @@ impl MentoringSchedule {
         MentoringScheduleRow::from_senior_user(senior_user, pool).await.map(|rows| Self {
             senior_id: senior_user.id(),
             schedule: rows.into_iter().map(|row| row.into()).collect(),
+            method: senior_user.mentoring_method(),
+            status: senior_user.mentoring_status(),
+            always_on: senior_user.mentoring_always_on(),
         })
     }
 
@@ -191,6 +197,7 @@ impl MentoringSchedule {
         update_data: &SeniorUserScheduleUpdateSchema,
         pool: &sqlx::Pool<MySql>,
     ) -> Result<Self> {
+        let user = SeniorUser::from_id(senior_id, pool).await?;
         let schedule: Vec<MentoringTime> = MentoringTime::get_all(pool).await.map(|times| {
             times
                 .into_iter()
@@ -201,7 +208,13 @@ impl MentoringSchedule {
                 .collect()
         })?;
 
-        Ok(Self { senior_id, schedule })
+        Ok(Self {
+            senior_id,
+            schedule,
+            method: user.mentoring_method(),
+            status: user.mentoring_status(),
+            always_on: user.mentoring_always_on(),
+        })
     }
 
     pub async fn update(
@@ -253,5 +266,17 @@ impl MentoringSchedule {
 
     pub fn times(&self) -> &Vec<MentoringTime> {
         &self.schedule
+    }
+
+    pub fn method(&self) -> MentoringMethodKind {
+        self.method
+    }
+
+    pub fn status(&self) -> bool {
+        self.status
+    }
+
+    pub fn always_on(&self) -> bool {
+        self.always_on
     }
 }
