@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "INSERT INTO email_verification (senior_id, code) VALUES (?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "a0b6a686a6792aa94db11e96d5acaff8b742cb9246d3ca8331e735a67418ea89"
+}

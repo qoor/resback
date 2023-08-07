@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "UPDATE senior_users SET\nnickname = ?,\npicture = ?,\nmajor = ?,\nexperience_years = ?,\nmentoring_price = ?,\nrepresentative_careers = ?,\ndescription = ?\nWHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 8
+    },
+    "nullable": []
+  },
+  "hash": "ab334229908ff66dcd671b68cda8f754eab7046a53bbf89237a302ed43b77f94"
+}

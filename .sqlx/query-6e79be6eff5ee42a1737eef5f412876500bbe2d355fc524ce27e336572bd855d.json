@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "DELETE FROM email_verification WHERE senior_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "6e79be6eff5ee42a1737eef5f412876500bbe2d355fc524ce27e336572bd855d"
+}

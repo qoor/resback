@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "UPDATE senior_users SET email_verified = true WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "1a1f1704304768d16ec72597ceb55c67d2a60afd8dd918dc18114051c75df328"
+}

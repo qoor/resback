@@ -1,6 +1,6 @@
 {
   "db_name": "MySQL",
-  "query": "SELECT * FROM senior_users WHERE major = ?",
+  "query": "SELECT * FROM senior_users\nWHERE nickname LIKE ?\nOR major LIKE ?\nOR representative_careers LIKE ?\nOR description LIKE ?",
   "describe": {
     "columns": [
       {
@@ -195,7 +195,7 @@
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 4
     },
     "nullable": [
       false,
@@ -219,5 +219,5 @@
       false
     ]
   },
-  "hash": "24b3f7d03746a2ae40dcd4839869081040b6253e8f4ac16cfa6f84425c27b1dc"
+  "hash": "4f9d0627907ba812efdf1bfcd0ffdcfa534f32c9551cffa364c0b02b42d45636"
 }

@@ -67,6 +67,7 @@ pub struct SeniorUserInfoSchema {
 #[derive(Debug, Deserialize, Clone)]
 pub struct SeniorSearchSchema {
     pub major: Option<String>,
+    pub keyword: Option<String>,
 }
 
 #[derive(Debug, Serialize, Clone)]

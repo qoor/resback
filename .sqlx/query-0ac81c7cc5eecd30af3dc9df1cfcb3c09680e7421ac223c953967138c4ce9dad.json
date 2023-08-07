@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "INSERT INTO senior_users (\nemail,\npassword,\nname,\nphone,\nnickname,\npicture,\nmajor,\nexperience_years,\nmentoring_price,\nrepresentative_careers,\ndescription)\nVALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 11
+    },
+    "nullable": []
+  },
+  "hash": "0ac81c7cc5eecd30af3dc9df1cfcb3c09680e7421ac223c953967138c4ce9dad"
+}

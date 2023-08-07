@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "UPDATE senior_users SET\nmentoring_method_id = ?,\nmentoring_status = ?,\nmentoring_always_on = ?\nWHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "6d5dd245bcfeea706f4f162f3476b201bb69d30c842d2d84e3296ba85021a98d"
+}

@@ -155,6 +155,16 @@
       },
       {
         "ordinal": 15,
+        "name": "email_verified",
+        "type_info": {
+          "type": "Tiny",
+          "flags": "NOT_NULL",
+          "char_set": 63,
+          "max_size": 1
+        }
+      },
+      {
+        "ordinal": 16,
         "name": "refresh_token",
         "type_info": {
           "type": "VarString",
@@ -164,7 +174,7 @@
         }
       },
       {
-        "ordinal": 16,
+        "ordinal": 17,
         "name": "created_at",
         "type_info": {
           "type": "Timestamp",
@@ -174,7 +184,7 @@
         }
       },
       {
-        "ordinal": 17,
+        "ordinal": 18,
         "name": "updated_at",
         "type_info": {
           "type": "Timestamp",
@@ -203,6 +213,7 @@
       true,
       true,
       true,
+      false,
       true,
       false,
       false

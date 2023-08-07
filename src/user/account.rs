@@ -374,6 +374,36 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             .collect();
 
             return Ok(SeniorSearchResultSchema { seniors });
+        } else if let Some(keyword) = options.keyword {
+            let keyword = format!("%{}%", keyword);
+            let seniors: Vec<SeniorUserInfoSchema> = sqlx::query_as_unchecked!(
+                Self,
+                "SELECT * FROM senior_users
+WHERE nickname LIKE ?
+OR major LIKE ?
+OR representative_careers LIKE ?
+OR description LIKE ?",
+                keyword,
+                keyword,
+                keyword,
+                keyword
+            )
+            .fetch_all(pool)
+            .await
+            .map_err(|err| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    ErrorResponse {
+                        status: "error",
+                        message: format!("Database error: {:?}", err),
+                    },
+                )
+            })?
+            .into_iter()
+            .map(|senior: SeniorUser| senior.into())
+            .collect();
+
+            return Ok(SeniorSearchResultSchema { seniors });
         }
 
         let seniors: Vec<SeniorUserInfoSchema> =
