@@ -61,6 +61,7 @@ pub struct SeniorUserInfoSchema {
     pub mentoring_price: i32,
     pub representative_careers: JsonArray<String>,
     pub description: String,
+    pub email_verified: bool,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -151,4 +152,9 @@ pub struct SeniorUserScheduleUpdateSchema {
     pub method: u32,
     pub status: bool,
     pub always_on: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct EmailVerificationSchema {
+    pub code: String,
 }

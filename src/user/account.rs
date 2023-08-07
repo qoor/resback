@@ -2,7 +2,7 @@
 
 use argon2::{password_hash::SaltString, Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use axum::{async_trait, http::StatusCode};
-use rand::rngs::OsRng;
+use rand::{rngs::OsRng, Rng};
 use serde::{Deserialize, Serialize};
 use sqlx::{
     types::chrono::{DateTime, Utc},
@@ -219,6 +219,7 @@ pub struct SeniorUser {
     mentoring_method_id: MentoringMethodKind,
     mentoring_status: bool,
     mentoring_always_on: bool,
+    email_verified: bool,
     refresh_token: Option<String>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
@@ -459,6 +460,34 @@ WHERE id = ?"#,
         })
     }
 
+    pub async fn register_verification(&self, pool: &sqlx::Pool<MySql>) -> Result<String> {
+        EmailVerification::generate(self, pool).await.map(|data| data.code)
+    }
+
+    pub async fn verify_email(&self, input: &str, pool: &sqlx::Pool<MySql>) -> Result<&Self> {
+        let data = EmailVerification::from_senior_user(self, pool).await?;
+
+        data.verify(input, pool).await?;
+
+        sqlx::query!("UPDATE senior_users SET email_verified = true WHERE id = ?", self.id)
+            .execute(pool)
+            .await
+            .map(|_| self)
+            .map_err(|err| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    ErrorResponse {
+                        status: "error",
+                        message: format!("Database error: {:?}", err),
+                    },
+                )
+            })
+    }
+
+    pub fn email(&self) -> &str {
+        &self.email
+    }
+
     pub fn mentoring_method(&self) -> MentoringMethodKind {
         self.mentoring_method_id
     }
@@ -548,6 +577,7 @@ impl From<SeniorUser> for SeniorUserInfoSchema {
             representative_careers: JsonArray::from_str(&value.representative_careers)
                 .unwrap_or_default(),
             description: value.description,
+            email_verified: value.email_verified,
         }
     }
 }
@@ -560,4 +590,110 @@ pub struct SeniorUserUpdate {
     pub mentoring_price: i32,
     pub representative_careers: JsonArray<String>,
     pub description: String,
+}
+
+struct EmailVerification {
+    id: u64,
+    senior_id: UserId,
+    code: String,
+    created_at: DateTime<Utc>,
+}
+
+impl EmailVerification {
+    async fn generate(senior_user: &SeniorUser, pool: &sqlx::Pool<MySql>) -> Result<Self> {
+        let code = format!("{:06}", rand::thread_rng().gen_range(0..=999999));
+
+        Self::delete_senior_id(senior_user.id, pool).await?;
+
+        sqlx::query!(
+            "INSERT INTO email_verification (senior_id, code) VALUES (?, ?)",
+            senior_user.id(),
+            code
+        )
+        .execute(pool)
+        .await
+        .map_err(|err| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                ErrorResponse { status: "error", message: format!("Database error: {:?}", err) },
+            )
+        })?;
+
+        Self::from_senior_user(senior_user, pool).await
+    }
+
+    async fn update(&self, code: &str, pool: &sqlx::Pool<MySql>) -> Result<&Self> {
+        sqlx::query!("UPDATE email_verification SET code = ? WHERE id = ?", code, self.id)
+            .execute(pool)
+            .await
+            .map(|_| self)
+            .map_err(|err| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    ErrorResponse {
+                        status: "error",
+                        message: format!("Database error: {:?}", err),
+                    },
+                )
+            })
+    }
+
+    async fn verify(self, input: &str, pool: &sqlx::Pool<MySql>) -> Result<()> {
+        match (chrono::Utc::now() - self.created_at).num_minutes() {
+            minutes if minutes < 3 => match self.code == input {
+                true => self.delete(pool).await,
+                false => Err((
+                    StatusCode::UNAUTHORIZED,
+                    ErrorResponse { status: "fail", message: "Not verified".to_string() },
+                )),
+            },
+            _ => Err((
+                StatusCode::UNAUTHORIZED,
+                ErrorResponse {
+                    status: "fail",
+                    message: "The verification code has been expired.".to_string(),
+                },
+            )),
+        }
+    }
+
+    async fn from_senior_user(senior_user: &SeniorUser, pool: &sqlx::Pool<MySql>) -> Result<Self> {
+        Self::from_senior_id(senior_user.id, pool).await
+    }
+
+    async fn from_senior_id(senior_id: UserId, pool: &sqlx::Pool<MySql>) -> Result<Self> {
+        sqlx::query_as_unchecked!(
+            Self,
+            "SELECT * FROM email_verification WHERE senior_id = ?",
+            senior_id
+        )
+        .fetch_one(pool)
+        .await
+        .map_err(|err| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                ErrorResponse { status: "error", message: format!("Database error: {:?}", err) },
+            )
+        })
+    }
+
+    async fn delete(self, pool: &sqlx::Pool<MySql>) -> Result<()> {
+        Self::delete_senior_id(self.senior_id, pool).await
+    }
+
+    async fn delete_senior_id(senior_id: UserId, pool: &sqlx::Pool<MySql>) -> Result<()> {
+        sqlx::query!("DELETE FROM email_verification WHERE senior_id = ?", senior_id)
+            .execute(pool)
+            .await
+            .map(|_| ())
+            .map_err(|err| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    ErrorResponse {
+                        status: "error",
+                        message: format!("Database error: {:?}", err),
+                    },
+                )
+            })
+    }
 }

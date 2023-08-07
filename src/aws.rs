@@ -58,3 +58,51 @@ impl S3Client {
         Ok(format!("https://{}.s3.{}.amazonaws.com/{}", self.bucket, self.region, target_path))
     }
 }
+
+pub struct SesClient {
+    client: aws_sdk_sesv2::Client,
+}
+
+impl SesClient {
+    pub async fn from_env() -> Self {
+        let aws_config = aws_config::load_from_env().await;
+
+        Self { client: aws_sdk_sesv2::Client::new(&aws_config) }
+    }
+
+    pub async fn send_mail(
+        &self,
+        from: &str,
+        to: &str,
+        subject: &str,
+        message: &str,
+    ) -> Result<()> {
+        let dest = aws_sdk_sesv2::types::Destination::builder().to_addresses(to).build();
+        let subject =
+            aws_sdk_sesv2::types::Content::builder().data(subject).charset("UTF-8").build();
+        let body = aws_sdk_sesv2::types::Content::builder().data(message).charset("UTF-8").build();
+        let body = aws_sdk_sesv2::types::Body::builder().text(body).build();
+
+        let message = aws_sdk_sesv2::types::Message::builder().subject(subject).body(body).build();
+        let content = aws_sdk_sesv2::types::EmailContent::builder().simple(message).build();
+
+        self.client
+            .send_email()
+            .from_email_address(from)
+            .destination(dest)
+            .content(content)
+            .send()
+            .await
+            .map_err(|err| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    ErrorResponse {
+                        status: "error",
+                        message: format!("Failed to send email: {:?}", err),
+                    },
+                )
+            })?;
+
+        Ok(())
+    }
+}

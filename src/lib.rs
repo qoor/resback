@@ -36,6 +36,7 @@ pub struct AppState {
     /// * https://github.com/ramosbugs/oauth2-rs/issues/191
     naver_oauth: NonStandardClient,
     s3: aws::S3Client,
+    ses: aws::SesClient,
 }
 
 pub async fn app(config: &Config, pool: &sqlx::Pool<MySql>) -> Router {
@@ -46,6 +47,7 @@ pub async fn app(config: &Config, pool: &sqlx::Pool<MySql>) -> Router {
         kakao_oauth: config.kakao_oauth.to_client(),
         naver_oauth: config.naver_oauth.to_non_standard_client(),
         s3: aws::S3Client::from_env().await,
+        ses: aws::SesClient::from_env().await,
     });
 
     let auth_layer = middleware::from_fn_with_state(app_state.clone(), jwt::authorize_user);
@@ -68,10 +70,12 @@ pub async fn app(config: &Config, pool: &sqlx::Pool<MySql>) -> Router {
         .route("/users/normal/:id", put(handler::users::update_normal_user_profile))
         .route("/users/normal/:id", delete(handler::users::delete_normal_user))
         .route("/users/senior/:id/mentoring", get(handler::users::get_senior_mentoring_schedule))
+        .route("/users/senior/:id/mentoring", put(handler::users::update_senior_mentoring_schedule))
         .route(
-            "/users/senior/:id/mentoring",
-            put(handler::users::update_senior_mentoring_schedule),
-        );
+            "/users/senior/:id/verification",
+            post(handler::users::register_senior_user_verification),
+        )
+        .route("/users/senior/:id/verification", get(handler::users::verify_senior_user));
     let mentoring_routers =
         Router::new().route("/mentoring/time", get(handler::mentoring::get_time_table));
 

@@ -14,9 +14,9 @@ use tokio::{fs, io};
 use crate::{
     error::ErrorResponse,
     schema::{
-        NormalUserInfoSchema, NormalUserUpdateSchema, SeniorRegisterSchema, SeniorSearchSchema,
-        SeniorUserInfoSchema, SeniorUserScheduleSchema, SeniorUserScheduleUpdateSchema,
-        SeniorUserUpdateSchema, UserIdentificationSchema,
+        EmailVerificationSchema, NormalUserInfoSchema, NormalUserUpdateSchema,
+        SeniorRegisterSchema, SeniorSearchSchema, SeniorUserInfoSchema, SeniorUserScheduleSchema,
+        SeniorUserScheduleUpdateSchema, SeniorUserUpdateSchema, UserIdentificationSchema,
     },
     user::{
         account::{NormalUser, NormalUserUpdate, SeniorUser, SeniorUserUpdate, User, UserId},
@@ -178,6 +178,45 @@ pub async fn update_senior_mentoring_schedule(
         .await?;
 
     Ok(Json(UserIdentificationSchema { user_type: UserType::SeniorUser, id }))
+}
+
+pub async fn register_senior_user_verification(
+    Path(id): Path<UserId>,
+    State(data): State<Arc<AppState>>,
+) -> crate::Result<impl IntoResponse> {
+    let user = SeniorUser::from_id(id, &data.database).await?;
+    let verification_code = user.register_verification(&data.database).await?;
+
+    data.ses
+        .send_mail(
+            "no-reply@respec.team",
+            user.email(),
+            "respec.team 가입을 위한 인증 코드입니다.",
+            &format!(
+                "안녕하세요, respec.team입니다.
+계정 가입을 완료하기 위한 인증 코드는 다음과 같습니다.
+
+{}
+
+저희 서비스에 가입해 주셔서 진심으로 감사드립니다.",
+                verification_code
+            ),
+        )
+        .await?;
+
+    Ok(Json(UserIdentificationSchema { user_type: UserType::SeniorUser, id }))
+}
+
+pub async fn verify_senior_user(
+    Path(id): Path<UserId>,
+    Query(payload): Query<EmailVerificationSchema>,
+    State(data): State<Arc<AppState>>,
+) -> crate::Result<impl IntoResponse> {
+    let user = SeniorUser::from_id(id, &data.database).await?;
+
+    user.verify_email(&payload.code, &data.database)
+        .await
+        .map(|_| Json(UserIdentificationSchema { user_type: UserType::SeniorUser, id }))
 }
 
 async fn get_user_picture_paths(
