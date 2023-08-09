@@ -465,6 +465,7 @@ pub struct SeniorUserUpdate {
 }
 
 struct EmailVerification {
+    #[allow(dead_code)]
     id: u64,
     senior_id: UserId,
     code: String,
@@ -486,13 +487,6 @@ impl EmailVerification {
         .await?;
 
         Self::from_senior_user(senior_user, pool).await
-    }
-
-    async fn update(&self, code: &str, pool: &sqlx::Pool<MySql>) -> Result<&Self> {
-        Ok(sqlx::query!("UPDATE email_verification SET code = ? WHERE id = ?", code, self.id)
-            .execute(pool)
-            .await
-            .map(|_| self)?)
     }
 
     async fn verify(self, input: &str, pool: &sqlx::Pool<MySql>) -> Result<()> {

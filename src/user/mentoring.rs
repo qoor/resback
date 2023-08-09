@@ -84,39 +84,37 @@ impl MentoringTime {
     pub async fn get_all(pool: &sqlx::Pool<MySql>) -> Result<Vec<Self>> {
         Ok(sqlx::query_as_unchecked!(Self, "SELECT * FROM mentoring_time").fetch_all(pool).await?)
     }
-
-    async fn new(id: u64, hour: u32) -> Self {
-        Self { id, hour }
-    }
-
-    pub fn id(&self) -> u64 {
-        self.id
-    }
-
-    pub fn hour(&self) -> u32 {
-        self.hour
-    }
 }
 
 #[derive(sqlx::FromRow, Debug)]
 pub struct MentoringMethod {
+    #[allow(dead_code)]
     kind: MentoringMethodKind,
+    #[allow(dead_code)]
     name: String,
 }
 
 impl MentoringMethod {
-    pub async fn get_all(pool: &sqlx::Pool<MySql>) -> Result<Vec<Self>> {
-        Ok(sqlx::query_as_unchecked!(Self, "SELECT id as kind, name FROM mentoring_method")
-            .fetch_all(pool)
-            .await?)
+    #[allow(dead_code)]
+    pub async fn from_kind(kind: MentoringMethodKind, pool: &sqlx::Pool<MySql>) -> Result<Self> {
+        Ok(sqlx::query_as_unchecked!(
+            Self,
+            "SELECT id as kind, name FROM mentoring_method WHERE id = ?",
+            kind
+        )
+        .fetch_one(pool)
+        .await?)
     }
 
-    pub fn kind(&self) -> MentoringMethodKind {
-        self.kind
-    }
-
-    pub fn name(&self) -> &str {
-        &self.name
+    #[allow(dead_code)]
+    pub async fn from_name(name: &str, pool: &sqlx::Pool<MySql>) -> Result<Self> {
+        Ok(sqlx::query_as_unchecked!(
+            Self,
+            "SELECT id as kind, name FROM mentoring_method WHERE name = ?",
+            name
+        )
+        .fetch_one(pool)
+        .await?)
     }
 }
 
