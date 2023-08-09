@@ -1,6 +1,6 @@
 {
   "db_name": "MySQL",
-  "query": "SELECT id as kind, name FROM mentoring_method",
+  "query": "SELECT id as kind, name FROM mentoring_method WHERE id = ?",
   "describe": {
     "columns": [
       {
@@ -25,12 +25,12 @@
       }
     ],
     "parameters": {
-      "Right": 0
+      "Right": 1
     },
     "nullable": [
       false,
       false
     ]
   },
-  "hash": "a1338f95304e63d6fe2f0aa12f4fb2956a1452fd2938dcf433ac3e80af0a8098"
+  "hash": "efe491146793f2e9d11e2f78529bd8f44f09dfd8bcf59f72ff7f976b70bc583f"
 }

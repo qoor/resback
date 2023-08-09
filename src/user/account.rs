@@ -6,7 +6,7 @@ use rand::{rngs::OsRng, Rng};
 use serde::{Deserialize, Serialize};
 use sqlx::{
     types::chrono::{DateTime, Utc},
-    MySql,
+    MySql, QueryBuilder,
 };
 
 use crate::{
@@ -267,49 +267,40 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         options: SeniorSearchSchema,
         pool: &sqlx::Pool<MySql>,
     ) -> Result<SeniorSearchResultSchema> {
+        let mut query = QueryBuilder::<MySql>::new("SELECT * FROM senior_users");
+        let mut major_pushed = false;
+
         if let Some(major) = options.major {
-            let seniors: Vec<SeniorUserInfoSchema> = sqlx::query_as_unchecked!(
-                SeniorUser,
-                "SELECT * FROM senior_users WHERE major = ?",
-                major
-            )
+            query.push(" WHERE major = ");
+            query.push_bind(major);
+            major_pushed = true;
+        }
+
+        if let Some(keyword) = options.keyword {
+            let keyword = format!("%{}%", keyword);
+
+            if !major_pushed {
+                query.push(" WHERE major LIKE ").push_bind(keyword.clone()).push(" OR ");
+            } else {
+                query.push(" AND (");
+            }
+
+            query.push("nickname LIKE ").push_bind(keyword.clone());
+            query.push(" OR representative_careers LIKE ").push_bind(keyword.clone());
+            query.push(" OR description LIKE ").push_bind(keyword.clone());
+
+            if major_pushed {
+                query.push(")");
+            }
+        }
+
+        let seniors: Vec<SeniorUserInfoSchema> = query
+            .build_query_as::<SeniorUser>()
             .fetch_all(pool)
             .await?
             .into_iter()
             .map(|senior| senior.into())
             .collect();
-
-            return Ok(SeniorSearchResultSchema { seniors });
-        } else if let Some(keyword) = options.keyword {
-            let keyword = format!("%{}%", keyword);
-            let seniors: Vec<SeniorUserInfoSchema> = sqlx::query_as_unchecked!(
-                Self,
-                "SELECT * FROM senior_users
-WHERE nickname LIKE ?
-OR major LIKE ?
-OR representative_careers LIKE ?
-OR description LIKE ?",
-                keyword,
-                keyword,
-                keyword,
-                keyword
-            )
-            .fetch_all(pool)
-            .await?
-            .into_iter()
-            .map(|senior: SeniorUser| senior.into())
-            .collect();
-
-            return Ok(SeniorSearchResultSchema { seniors });
-        }
-
-        let seniors: Vec<SeniorUserInfoSchema> =
-            sqlx::query_as_unchecked!(Self, "SELECT * FROM senior_users")
-                .fetch_all(pool)
-                .await?
-                .into_iter()
-                .map(|senior| senior.into())
-                .collect();
 
         Ok(SeniorSearchResultSchema { seniors })
     }
