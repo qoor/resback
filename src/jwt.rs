@@ -5,7 +5,7 @@ use std::sync::Arc;
 use axum::{
     extract::State,
     headers::{authorization::Bearer, Authorization},
-    http::{Request, StatusCode},
+    http::Request,
     middleware::Next,
     response::IntoResponse,
     RequestPartsExt, TypedHeader,
@@ -16,7 +16,7 @@ use jsonwebtoken::{DecodingKey, EncodingKey};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    error::ErrorResponse,
+    error::Error,
     user::{
         account::{NormalUser, SeniorUser, User, UserId},
         UserType,
@@ -74,35 +74,22 @@ impl Token {
             nonce: user_type.to_string(),
         };
 
-        jsonwebtoken::encode(
+        Ok(jsonwebtoken::encode(
             &jsonwebtoken::Header::new(jsonwebtoken::Algorithm::RS256),
             &claims,
             private_key,
         )
-        .map(|token| Ok(Token { claims, encoded_token: token, user_id, user_type }))
-        .map_err(|_| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorResponse { status: "fail", message: "Failed to create new token".to_string() },
-            )
-        })?
+        .map(|token| Token { claims, encoded_token: token, user_id, user_type })?)
     }
 
     pub fn from_encoded_token(
         encoded_token: Option<&str>,
         public_key: &DecodingKey,
     ) -> Result<Self> {
-        let encoded_token = encoded_token
-            .ok_or((
-                StatusCode::BAD_REQUEST,
-                ErrorResponse { status: "fail", message: "Token does not exist".to_string() },
-            ))
-            .and_then(|encoded_token| {
+        let encoded_token =
+            encoded_token.ok_or(Error::TokenNotExists).and_then(|encoded_token| {
                 if encoded_token.is_empty() {
-                    return Err((
-                        StatusCode::BAD_REQUEST,
-                        ErrorResponse { status: "fail", message: "Invalid token size".to_string() },
-                    ));
+                    return Err(Error::InvalidToken);
                 }
 
                 Ok(encoded_token.to_string())
@@ -113,29 +100,12 @@ impl Token {
             public_key,
             &jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::RS256),
         )
-        .map_err(|_| {
-            (
-                StatusCode::UNAUTHORIZED,
-                ErrorResponse {
-                    status: "fail",
-                    message: "Token is invalid or expired".to_string(),
-                },
-            )
-        })
         .map(|token| token.claims)?;
 
-        let user_id: UserId = claims.sub.parse().map_err(|_| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorResponse { status: "error", message: "Invalid user id".to_string() },
-            )
-        })?;
-        let user_type: UserType = claims.nonce.parse().map_err(|_| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorResponse { status: "error", message: "Invalid user type".to_string() },
-            )
-        })?;
+        let user_id =
+            claims.sub.parse::<UserId>().map_err(|err| Error::UnhandledException(Box::new(err)))?;
+        let user_type: UserType =
+            claims.nonce.parse::<UserType>().map_err(Error::UnhandledException)?;
 
         Ok(Token { claims, encoded_token, user_id, user_type })
     }

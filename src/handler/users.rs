@@ -8,11 +8,10 @@ use axum::{
     Json,
 };
 use axum_typed_multipart::TypedMultipart;
-use hyper::StatusCode;
 use tokio::{fs, io};
 
 use crate::{
-    error::ErrorResponse,
+    error::Error,
     schema::{
         EmailVerificationSchema, NormalUserInfoSchema, NormalUserUpdateSchema,
         SeniorRegisterSchema, SeniorSearchSchema, SeniorUserInfoSchema, SeniorUserScheduleSchema,
@@ -54,15 +53,12 @@ pub async fn update_senior_user_profile(
             let (temp_path, path_to_push) =
                 get_user_picture_paths(&UserType::SeniorUser, &id).await?;
 
-            picture.contents.persist(&temp_path, true).await.map_err(|err| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    ErrorResponse {
-                        status: "error",
-                        message: format!("Failed to receive picture file: {:?}", err),
-                    },
-                )
-            })?;
+            picture
+                .contents
+                .persist(&temp_path, true)
+                .await
+                .map_err(|err| Error::PersistFileFail(err.into()))?;
+
             data.s3.push_file(&temp_path, &path_to_push).await?
         }
         None => user.picture().to_string(),
@@ -112,15 +108,11 @@ pub async fn update_normal_user_profile(
             let (temp_path, path_to_push) =
                 get_user_picture_paths(&UserType::NormalUser, &id).await?;
 
-            picture.contents.persist(&temp_path, true).await.map_err(|err| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    ErrorResponse {
-                        status: "error",
-                        message: format!("Failed to receive picture file: {:?}", err),
-                    },
-                )
-            })?;
+            picture
+                .contents
+                .persist(&temp_path, true)
+                .await
+                .map_err(|err| Error::PersistFileFail(err.into()))?;
             data.s3.push_file(&temp_path, &path_to_push).await?
         }
         None => user.picture().to_string(),
@@ -168,10 +160,8 @@ pub async fn update_senior_mentoring_schedule(
 ) -> crate::Result<impl IntoResponse> {
     let user = SeniorUser::from_id(id, &data.database).await?;
     let schedule = MentoringSchedule::from_senior_user(&user, &data.database).await?;
-    let method: MentoringMethodKind = update_data
-        .method
-        .try_into()
-        .map_err(|err| (StatusCode::BAD_REQUEST, ErrorResponse { status: "fail", message: err }))?;
+    let method: MentoringMethodKind =
+        update_data.method.try_into().map_err(Error::UnhandledException)?;
 
     schedule.update(&update_data, &data.database).await?;
     user.update_mentoring_data(&method, update_data.status, update_data.always_on, &data.database)
@@ -235,15 +225,7 @@ async fn get_user_picture_paths(
             io::ErrorKind::AlreadyExists => Ok(()),
             _ => Err(error),
         })
-        .map_err(|_| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorResponse {
-                    status: "error",
-                    message: "Failed to create temporary directory".to_string(),
-                },
-            )
-        })?;
+        .map_err(|err| Error::Io { path: temp_dir.to_path_buf(), source: err })?;
 
     let s3_path = format!("uploaded-profile-image/{}/{}", user_type_str, id);
 

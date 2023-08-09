@@ -6,7 +6,7 @@ use axum::{async_trait, extract::multipart};
 use axum_typed_multipart::TypedMultipartError;
 use serde::{Deserialize, Serialize};
 
-use crate::oauth::OAuthProvider;
+use crate::{error::BoxDynError, oauth::OAuthProvider};
 
 pub mod account;
 pub mod mentoring;
@@ -19,13 +19,13 @@ pub enum UserType {
 }
 
 impl FromStr for UserType {
-    type Err = String;
+    type Err = BoxDynError;
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s {
             "NormalUser" => Ok(Self::NormalUser),
             "SeniorUser" => Ok(Self::SeniorUser),
-            _ => Err("Invalid user type string".to_string()),
+            _ => Err("Invalid user type string")?,
         }
     }
 }

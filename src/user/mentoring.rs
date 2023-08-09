@@ -5,12 +5,11 @@ use std::str::FromStr;
 
 use axum::{async_trait, extract::multipart};
 use axum_typed_multipart::TypedMultipartError;
-use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
 use sqlx::MySql;
 
 use crate::{
-    error::ErrorResponse, schema::SeniorUserScheduleUpdateSchema, user::account::User, Result,
+    error::BoxDynError, schema::SeniorUserScheduleUpdateSchema, user::account::User, Result,
 };
 
 use super::account::{SeniorUser, UserId};
@@ -35,24 +34,25 @@ impl fmt::Display for MentoringMethodKind {
 }
 
 impl FromStr for MentoringMethodKind {
-    type Err = String;
+    type Err = BoxDynError;
+
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s {
             "video_call" => Ok(MentoringMethodKind::VideoCall),
             "voice_call" => Ok(MentoringMethodKind::VoiceCall),
-            _ => Err("Invalid mentoring method".to_string()),
+            _ => Err("Invalid mentoring method")?,
         }
     }
 }
 
 impl TryFrom<u32> for MentoringMethodKind {
-    type Error = String;
+    type Error = BoxDynError;
 
     fn try_from(value: u32) -> std::result::Result<Self, Self::Error> {
         match value {
             1 => Ok(MentoringMethodKind::VideoCall),
             2 => Ok(MentoringMethodKind::VoiceCall),
-            _ => Err("Invalid mentoring method id".to_string()),
+            _ => Err("Invalid mentoring method id")?,
         }
     }
 }
@@ -82,15 +82,7 @@ pub struct MentoringTime {
 
 impl MentoringTime {
     pub async fn get_all(pool: &sqlx::Pool<MySql>) -> Result<Vec<Self>> {
-        sqlx::query_as_unchecked!(Self, "SELECT * FROM mentoring_time")
-            .fetch_all(pool)
-            .await
-            .map_err(|err| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    ErrorResponse { status: "error", message: format!("Database error: {}", err) },
-                )
-            })
+        Ok(sqlx::query_as_unchecked!(Self, "SELECT * FROM mentoring_time").fetch_all(pool).await?)
     }
 
     async fn new(id: u64, hour: u32) -> Self {
@@ -114,15 +106,9 @@ pub struct MentoringMethod {
 
 impl MentoringMethod {
     pub async fn get_all(pool: &sqlx::Pool<MySql>) -> Result<Vec<Self>> {
-        sqlx::query_as_unchecked!(Self, "SELECT id as kind, name FROM mentoring_method")
+        Ok(sqlx::query_as_unchecked!(Self, "SELECT id as kind, name FROM mentoring_method")
             .fetch_all(pool)
-            .await
-            .map_err(|err| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    ErrorResponse { status: "error", message: format!("Database error: {}", err) },
-                )
-            })
+            .await?)
     }
 
     pub fn kind(&self) -> MentoringMethodKind {
@@ -148,19 +134,13 @@ impl MentoringScheduleRow {
         senior_user: &SeniorUser,
         pool: &sqlx::Pool<MySql>,
     ) -> Result<Vec<Self>> {
-        sqlx::query_as!(
+        Ok(sqlx::query_as!(
             Self,
             "SELECT mentoring_schedule.*, mentoring_time.hour FROM mentoring_schedule INNER JOIN mentoring_time ON mentoring_time.id = time_id WHERE senior_id = ?",
             senior_user.id()
         )
         .fetch_all(pool)
-        .await
-        .map_err(|err| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorResponse { status: "error", message: format!("Database error: {}", err) },
-            )
-        })
+        .await?)
     }
 }
 
@@ -227,16 +207,7 @@ impl MentoringSchedule {
 
         sqlx::query!("DELETE FROM mentoring_schedule WHERE senior_id = ?", user.id())
             .execute(pool)
-            .await
-            .map_err(|err| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    ErrorResponse {
-                        status: "error",
-                        message: format!("Failed to delete previous user schedule: {}", err),
-                    },
-                )
-            })?;
+            .await?;
 
         for time in &new_schedule.schedule {
             sqlx::query!(
@@ -245,16 +216,7 @@ impl MentoringSchedule {
                 time.id
             )
             .execute(pool)
-            .await
-            .map_err(|err| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    ErrorResponse {
-                        status: "error",
-                        message: format!("Failed to insert new user schedule: {}", err),
-                    },
-                )
-            })?;
+            .await?;
         }
 
         Ok(new_schedule)

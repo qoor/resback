@@ -1,8 +1,9 @@
 // Copyright 2023. The resback authors all rights reserved.
 
-mod aws;
 pub mod config;
 pub mod env;
+
+mod aws;
 mod error;
 mod handler;
 mod jwt;
@@ -23,7 +24,7 @@ use sqlx::MySql;
 
 pub use config::Config;
 pub use env::get_env_or_panic;
-pub use error::Result;
+pub use error::{Error, Result};
 
 pub struct AppState {
     database: sqlx::Pool<MySql>,

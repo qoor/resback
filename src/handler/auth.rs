@@ -4,7 +4,6 @@ use std::sync::Arc;
 
 use axum::{
     extract::{Path, State},
-    http::StatusCode,
     response::IntoResponse,
     Json,
 };
@@ -17,7 +16,7 @@ use oauth2::{
 use serde::{de::DeserializeOwned, Deserialize};
 
 use crate::{
-    error,
+    error::Error,
     jwt::Token,
     oauth::{GoogleUser, KakaoUser, NaverUserResponse, OAuthProvider},
     schema::{NormalLoginSchema, SeniorLoginSchema, UserIdentificationSchema},
@@ -122,20 +121,10 @@ pub async fn auth_refresh(
         }
     };
 
-    let user_token = user_token.ok_or((
-        StatusCode::UNAUTHORIZED,
-        error::ErrorResponse { status: "fail", message: "You are not logged in".to_string() },
-    ))?;
-
-    if refresh_token != user_token {
-        return Err((
-            StatusCode::UNAUTHORIZED,
-            error::ErrorResponse {
-                status: "fail",
-                message: "Authorization data and user data do not match".to_string(),
-            },
-        ));
-    }
+    user_token.ok_or(Error::Unauthorized).and_then(|token| match refresh_token == token {
+        true => Ok(token),
+        false => Err(Error::Unauthorized),
+    })?;
 
     add_access_token_to_cookie_jar(user_id, user_type, cookie_jar, &data).await
 }
@@ -144,38 +133,18 @@ pub async fn logout_user(
     cookie_jar: CookieJar,
     State(data): State<Arc<AppState>>,
 ) -> crate::Result<impl IntoResponse> {
-    let access_token = cookie_jar.get(ACCESS_TOKEN_COOKIE).ok_or((
-        StatusCode::INTERNAL_SERVER_ERROR,
-        (crate::error::ErrorResponse {
-            status: "error",
-            message: "Failed to get login information".to_string(),
-        }),
-    ))?;
-    let _refresh_token = cookie_jar.get(REFRESH_TOKEN_COOKIE).ok_or((
-        StatusCode::INTERNAL_SERVER_ERROR,
-        (crate::error::ErrorResponse {
-            status: "error",
-            message: "Failed to get login information".to_string(),
-        }),
-    ))?;
+    let access_token = cookie_jar.get(ACCESS_TOKEN_COOKIE).ok_or(Error::TokenNotExists)?;
+    let _refresh_token = cookie_jar.get(REFRESH_TOKEN_COOKIE).ok_or(Error::TokenNotExists)?;
 
     let (user_type, id) = Token::from_encoded_token(
         Some(access_token.value()),
         data.config.public_key.decoding_key(),
     )
-    .map(|token| (token.user_type(), token.user_id()))
-    .map_err(|_| {
-        (
-            StatusCode::UNAUTHORIZED,
-            crate::error::ErrorResponse {
-                status: "fail",
-                message: "Failed to verify user".to_string(),
-            },
-        )
-    })?;
+    .map(|token| (token.user_type(), token.user_id()))?;
 
     let access_token = Cookie::build(ACCESS_TOKEN_COOKIE, "").path("/").finish();
     let refresh_token = Cookie::build(REFRESH_TOKEN_COOKIE, "").path("/").finish();
+
     Ok((
         cookie_jar.remove(access_token).remove(refresh_token),
         Json(UserIdentificationSchema { user_type, id }),

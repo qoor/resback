@@ -1,7 +1,7 @@
 // Copyright 2023. The resback authors all rights reserved.
 
 use argon2::{password_hash::SaltString, Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
-use axum::{async_trait, http::StatusCode};
+use axum::async_trait;
 use rand::{rngs::OsRng, Rng};
 use serde::{Deserialize, Serialize};
 use sqlx::{
@@ -10,7 +10,7 @@ use sqlx::{
 };
 
 use crate::{
-    error::ErrorResponse,
+    error::Error,
     nickname::{self, KoreanGenerator},
     schema::{
         JsonArray, NormalUserInfoSchema, SeniorRegisterSchema, SeniorSearchResultSchema,
@@ -64,13 +64,7 @@ impl NormalUser {
             get_random_user_picture_url(UserType::NormalUser)
         )
         .execute(pool)
-        .await
-        .map_err(|err| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorResponse { status: "error", message: format!("Database error: {}", err) },
-            )
-        })?;
+        .await?;
 
         Ok(result.last_insert_id())
     }
@@ -86,17 +80,8 @@ impl NormalUser {
             oauth_user.id()
         )
         .fetch_optional(pool)
-        .await
-        .map_err(|err| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorResponse { status: "error", message: format!("Database error: {}", err) },
-            )
-        })?
-        .ok_or((
-            StatusCode::BAD_REQUEST,
-            ErrorResponse { status: "fail", message: "Invalid OAuth user data".to_string() },
-        ))
+        .await?
+        .ok_or(Error::LoginFail)
     }
 
     pub async fn update_profile(
@@ -104,7 +89,7 @@ impl NormalUser {
         update_data: &NormalUserUpdate,
         pool: &sqlx::Pool<MySql>,
     ) -> Result<&Self> {
-        sqlx::query!(
+        Ok(sqlx::query!(
             "UPDATE normal_users SET nickname = ?, picture = ? WHERE id = ?",
             update_data.nickname,
             update_data.picture,
@@ -112,13 +97,7 @@ impl NormalUser {
         )
         .execute(pool)
         .await
-        .map(|_| self)
-        .map_err(|err| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorResponse { status: "error", message: format!("Database error: {:?}", err) },
-            )
-        })
+        .map(|_| self)?)
     }
 }
 
@@ -139,49 +118,24 @@ impl User for NormalUser {
     async fn from_id(id: UserId, pool: &sqlx::Pool<MySql>) -> Result<Self> {
         sqlx::query_as_unchecked!(Self, "SELECT * FROM normal_users WHERE id = ?", id)
             .fetch_optional(pool)
-            .await
-            .map_err(|err| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    ErrorResponse { status: "error", message: format!("Database error: {}", err) },
-                )
-            })?
-            .ok_or((
-                StatusCode::BAD_REQUEST,
-                ErrorResponse { status: "fail", message: "Invalid OAuth user data".to_string() },
-            ))
+            .await?
+            .ok_or(Error::LoginFail)
     }
 
     async fn update_refresh_token(&self, token: &str, pool: &sqlx::Pool<MySql>) -> Result<&Self> {
-        sqlx::query!("UPDATE normal_users SET refresh_token = ? WHERE id = ?", token, self.id)
+        Ok(sqlx::query!("UPDATE normal_users SET refresh_token = ? WHERE id = ?", token, self.id)
             .execute(pool)
             .await
-            .map(|_| self)
-            .map_err(|err| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    ErrorResponse { status: "error", message: format!("Database error: {}", err) },
-                )
-            })
+            .map(|_| self)?)
     }
 
     async fn delete(id: UserId, pool: &sqlx::Pool<MySql>) -> Result<UserId> {
-        let result = sqlx::query!("DELETE FROM normal_users WHERE id = ?", id)
-            .execute(pool)
-            .await
-            .map_err(|err| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    ErrorResponse { status: "error", message: format!("Database Error: {}", err) },
-                )
-            })?;
+        let result =
+            sqlx::query!("DELETE FROM normal_users WHERE id = ?", id).execute(pool).await?;
 
         match result.rows_affected() {
             1.. => Ok(id),
-            _ => Err((
-                StatusCode::NOT_FOUND,
-                ErrorResponse { status: "fail", message: "Cannot find user".to_string() },
-            )),
+            _ => Err(Error::UserNotFound { user_type: UserType::NormalUser, id }),
         }
     }
 }
@@ -231,10 +185,7 @@ impl SeniorUser {
         pool: &sqlx::Pool<MySql>,
     ) -> Result<UserId> {
         if register_data.email.is_empty() || register_data.password.is_empty() {
-            return Err((
-                StatusCode::BAD_REQUEST,
-                ErrorResponse { status: "fail", message: "email or password is empty".to_string() },
-            ));
+            return Err(Error::InvalidRequestData);
         }
 
         let salt = SaltString::generate(&mut OsRng);
@@ -246,15 +197,6 @@ impl SeniorUser {
         )
         .unwrap()
         .hash_password(register_data.password.as_bytes(), &salt)
-        .map_err(|err| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorResponse {
-                    status: "error",
-                    message: format!("Error while hashing password: {}", err),
-                },
-            )
-        })
         .map(|hash| hash.to_string())?;
 
         let nickname = KoreanGenerator::new(nickname::Naming::Plain).next().unwrap();
@@ -285,45 +227,21 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             register_data.description,
         )
         .execute(pool)
-        .await
-        .map_err(|err| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorResponse { status: "error", message: format!("Database error: {}", err) },
-            )
-        })?;
+        .await?;
 
         Ok(user.last_insert_id())
     }
 
     pub async fn login(email: &str, password: &str, pool: &sqlx::Pool<MySql>) -> Result<Self> {
         if email.is_empty() || password.is_empty() {
-            return Err((
-                StatusCode::BAD_REQUEST,
-                ErrorResponse { status: "fail", message: "email or password is empty".to_string() },
-            ));
+            return Err(Error::InvalidRequestData);
         }
 
         let user =
             sqlx::query_as_unchecked!(Self, "SELECT * FROM senior_users WHERE email = ?", email)
                 .fetch_optional(pool)
-                .await
-                .map_err(|err| {
-                    (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        ErrorResponse {
-                            status: "error",
-                            message: format!("Database error: {}", err),
-                        },
-                    )
-                })?
-                .ok_or((
-                    StatusCode::BAD_REQUEST,
-                    ErrorResponse {
-                        status: "fail",
-                        message: "Invalid email or password".to_string(),
-                    },
-                ))?;
+                .await?
+                .ok_or(Error::LoginFail)?;
 
         let password_verified = match PasswordHash::new(&user.password) {
             Ok(parsed_hash) => Argon2::new_with_secret(
@@ -339,10 +257,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         };
 
         if !password_verified {
-            return Err((
-                StatusCode::BAD_REQUEST,
-                ErrorResponse { status: "fail", message: "Invalid email or password".to_string() },
-            ));
+            return Err(Error::LoginFail);
         }
 
         Ok(user)
@@ -359,16 +274,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 major
             )
             .fetch_all(pool)
-            .await
-            .map_err(|err| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    ErrorResponse {
-                        status: "error",
-                        message: format!("Database error: {:?}", err),
-                    },
-                )
-            })?
+            .await?
             .into_iter()
             .map(|senior| senior.into())
             .collect();
@@ -389,16 +295,7 @@ OR description LIKE ?",
                 keyword
             )
             .fetch_all(pool)
-            .await
-            .map_err(|err| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    ErrorResponse {
-                        status: "error",
-                        message: format!("Database error: {:?}", err),
-                    },
-                )
-            })?
+            .await?
             .into_iter()
             .map(|senior: SeniorUser| senior.into())
             .collect();
@@ -409,16 +306,7 @@ OR description LIKE ?",
         let seniors: Vec<SeniorUserInfoSchema> =
             sqlx::query_as_unchecked!(Self, "SELECT * FROM senior_users")
                 .fetch_all(pool)
-                .await
-                .map_err(|err| {
-                    (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        ErrorResponse {
-                            status: "error",
-                            message: format!("Database error: {:?}", err),
-                        },
-                    )
-                })?
+                .await?
                 .into_iter()
                 .map(|senior| senior.into())
                 .collect();
@@ -431,7 +319,7 @@ OR description LIKE ?",
         update_data: &SeniorUserUpdate,
         pool: &sqlx::Pool<MySql>,
     ) -> Result<&Self> {
-        sqlx::query!(
+        Ok(sqlx::query!(
             r#"UPDATE senior_users SET
 nickname = ?,
 picture = ?,
@@ -452,13 +340,7 @@ WHERE id = ?"#,
         )
         .execute(pool)
         .await
-        .map(|_| self)
-        .map_err(|err| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorResponse { status: "error", message: format!("Database error: {:?}", err) },
-            )
-        })
+        .map(|_| self)?)
     }
 
     pub async fn update_mentoring_data(
@@ -468,7 +350,7 @@ WHERE id = ?"#,
         always_on: bool,
         pool: &sqlx::Pool<MySql>,
     ) -> Result<&Self> {
-        sqlx::query!(
+        Ok(sqlx::query!(
             r#"UPDATE senior_users SET
 mentoring_method_id = ?,
 mentoring_status = ?,
@@ -481,13 +363,7 @@ WHERE id = ?"#,
         )
         .execute(pool)
         .await
-        .map(|_| self)
-        .map_err(|err| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorResponse { status: "error", message: format!("Database error: {:?}", err) },
-            )
-        })
+        .map(|_| self)?)
     }
 
     pub async fn register_verification(&self, pool: &sqlx::Pool<MySql>) -> Result<String> {
@@ -499,19 +375,10 @@ WHERE id = ?"#,
 
         data.verify(input, pool).await?;
 
-        sqlx::query!("UPDATE senior_users SET email_verified = true WHERE id = ?", self.id)
+        Ok(sqlx::query!("UPDATE senior_users SET email_verified = true WHERE id = ?", self.id)
             .execute(pool)
             .await
-            .map(|_| self)
-            .map_err(|err| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    ErrorResponse {
-                        status: "error",
-                        message: format!("Database error: {:?}", err),
-                    },
-                )
-            })
+            .map(|_| self)?)
     }
 
     pub fn email(&self) -> &str {
@@ -548,49 +415,24 @@ impl User for SeniorUser {
     async fn from_id(id: UserId, pool: &sqlx::Pool<MySql>) -> Result<Self> {
         sqlx::query_as_unchecked!(Self, "SELECT * FROM senior_users WHERE id = ?", id)
             .fetch_optional(pool)
-            .await
-            .map_err(|err| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    ErrorResponse { status: "error", message: format!("Database error: {}", err) },
-                )
-            })?
-            .ok_or((
-                StatusCode::BAD_REQUEST,
-                ErrorResponse { status: "fail", message: "Invalid senior user id".to_string() },
-            ))
+            .await?
+            .ok_or(Error::UserNotFound { user_type: UserType::SeniorUser, id })
     }
 
     async fn update_refresh_token(&self, token: &str, pool: &sqlx::Pool<MySql>) -> Result<&Self> {
-        sqlx::query!("UPDATE senior_users SET refresh_token = ? WHERE id = ?", token, self.id)
+        Ok(sqlx::query!("UPDATE senior_users SET refresh_token = ? WHERE id = ?", token, self.id)
             .execute(pool)
             .await
-            .map(|_| self)
-            .map_err(|err| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    ErrorResponse { status: "error", message: format!("Database error: {}", err) },
-                )
-            })
+            .map(|_| self)?)
     }
 
     async fn delete(id: UserId, pool: &sqlx::Pool<MySql>) -> Result<UserId> {
-        let result = sqlx::query!("DELETE FROM senior_users WHERE id = ?", id)
-            .execute(pool)
-            .await
-            .map_err(|err| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    ErrorResponse { status: "error", message: format!("Database Error: {}", err) },
-                )
-            })?;
+        let result =
+            sqlx::query!("DELETE FROM senior_users WHERE id = ?", id).execute(pool).await?;
 
         match result.rows_affected() {
             1.. => Ok(id),
-            _ => Err((
-                StatusCode::NOT_FOUND,
-                ErrorResponse { status: "fail", message: "Cannot find user".to_string() },
-            )),
+            _ => Err(Error::UserNotFound { user_type: UserType::SeniorUser, id }),
         }
     }
 }
@@ -641,49 +483,25 @@ impl EmailVerification {
             code
         )
         .execute(pool)
-        .await
-        .map_err(|err| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorResponse { status: "error", message: format!("Database error: {:?}", err) },
-            )
-        })?;
+        .await?;
 
         Self::from_senior_user(senior_user, pool).await
     }
 
     async fn update(&self, code: &str, pool: &sqlx::Pool<MySql>) -> Result<&Self> {
-        sqlx::query!("UPDATE email_verification SET code = ? WHERE id = ?", code, self.id)
+        Ok(sqlx::query!("UPDATE email_verification SET code = ? WHERE id = ?", code, self.id)
             .execute(pool)
             .await
-            .map(|_| self)
-            .map_err(|err| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    ErrorResponse {
-                        status: "error",
-                        message: format!("Database error: {:?}", err),
-                    },
-                )
-            })
+            .map(|_| self)?)
     }
 
     async fn verify(self, input: &str, pool: &sqlx::Pool<MySql>) -> Result<()> {
         match (chrono::Utc::now() - self.created_at).num_minutes() {
             minutes if minutes < 3 => match self.code == input {
                 true => self.delete(pool).await,
-                false => Err((
-                    StatusCode::UNAUTHORIZED,
-                    ErrorResponse { status: "fail", message: "Not verified".to_string() },
-                )),
+                false => Err(Error::Unauthorized),
             },
-            _ => Err((
-                StatusCode::UNAUTHORIZED,
-                ErrorResponse {
-                    status: "fail",
-                    message: "The verification code has been expired.".to_string(),
-                },
-            )),
+            _ => Err(Error::Unauthorized),
         }
     }
 
@@ -692,19 +510,13 @@ impl EmailVerification {
     }
 
     async fn from_senior_id(senior_id: UserId, pool: &sqlx::Pool<MySql>) -> Result<Self> {
-        sqlx::query_as_unchecked!(
+        Ok(sqlx::query_as_unchecked!(
             Self,
             "SELECT * FROM email_verification WHERE senior_id = ?",
             senior_id
         )
         .fetch_one(pool)
-        .await
-        .map_err(|err| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorResponse { status: "error", message: format!("Database error: {:?}", err) },
-            )
-        })
+        .await?)
     }
 
     async fn delete(self, pool: &sqlx::Pool<MySql>) -> Result<()> {
@@ -712,18 +524,9 @@ impl EmailVerification {
     }
 
     async fn delete_senior_id(senior_id: UserId, pool: &sqlx::Pool<MySql>) -> Result<()> {
-        sqlx::query!("DELETE FROM email_verification WHERE senior_id = ?", senior_id)
+        Ok(sqlx::query!("DELETE FROM email_verification WHERE senior_id = ?", senior_id)
             .execute(pool)
             .await
-            .map(|_| ())
-            .map_err(|err| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    ErrorResponse {
-                        status: "error",
-                        message: format!("Database error: {:?}", err),
-                    },
-                )
-            })
+            .map(|_| ())?)
     }
 }
