@@ -17,7 +17,7 @@ use serde::{de::DeserializeOwned, Deserialize};
 
 use crate::{
     error::Error,
-    jwt::Token,
+    jwt::{self, Token},
     oauth::{GoogleUser, KakaoUser, NaverUserResponse, OAuthProvider},
     schema::{NormalLoginSchema, SeniorLoginSchema, UserIdentificationSchema},
     user::account::{SeniorUser, UserId},
@@ -133,22 +133,10 @@ pub async fn logout_user(
     cookie_jar: CookieJar,
     State(data): State<Arc<AppState>>,
 ) -> crate::Result<impl IntoResponse> {
-    let access_token = cookie_jar.get(ACCESS_TOKEN_COOKIE).ok_or(Error::TokenNotExists)?;
-    let _refresh_token = cookie_jar.get(REFRESH_TOKEN_COOKIE).ok_or(Error::TokenNotExists)?;
+    let (user_type, id, cookie_jar) =
+        jwt::logout_user(cookie_jar, data.config.public_key.decoding_key()).await?;
 
-    let (user_type, id) = Token::from_encoded_token(
-        Some(access_token.value()),
-        data.config.public_key.decoding_key(),
-    )
-    .map(|token| (token.user_type(), token.user_id()))?;
-
-    let access_token = Cookie::build(ACCESS_TOKEN_COOKIE, "").path("/").finish();
-    let refresh_token = Cookie::build(REFRESH_TOKEN_COOKIE, "").path("/").finish();
-
-    Ok((
-        cookie_jar.remove(access_token).remove(refresh_token),
-        Json(UserIdentificationSchema { user_type, id }),
-    ))
+    Ok((cookie_jar, Json(UserIdentificationSchema { user_type, id })))
 }
 
 async fn get_oauth_user_data<U, TE, TR, TT, TIR, RT, TRE>(

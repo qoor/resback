@@ -65,18 +65,36 @@ pub async fn app(config: &Config, pool: &sqlx::Pool<MySql>) -> Router {
             post(handler::users::register_senior_user).get(handler::users::get_seniors),
         )
         .route("/users/senior/:id", get(handler::users::get_senior_user_info))
-        .route("/users/senior/:id", put(handler::users::update_senior_user_profile))
-        .route("/users/senior/:id", delete(handler::users::delete_senior_user))
+        .route(
+            "/users/senior/:id",
+            put(handler::users::update_senior_user_profile).route_layer(auth_layer.clone()),
+        )
+        .route(
+            "/users/senior/:id",
+            delete(handler::users::delete_senior_user).route_layer(auth_layer.clone()),
+        )
         .route("/users/normal/:id", get(handler::users::get_normal_user_info))
-        .route("/users/normal/:id", put(handler::users::update_normal_user_profile))
-        .route("/users/normal/:id", delete(handler::users::delete_normal_user))
+        .route(
+            "/users/normal/:id",
+            put(handler::users::update_normal_user_profile).route_layer(auth_layer.clone()),
+        )
+        .route(
+            "/users/normal/:id",
+            delete(handler::users::delete_normal_user).route_layer(auth_layer.clone()),
+        )
         .route("/users/senior/:id/mentoring", get(handler::users::get_senior_mentoring_schedule))
-        .route("/users/senior/:id/mentoring", put(handler::users::update_senior_mentoring_schedule))
+        .route(
+            "/users/senior/:id/mentoring",
+            put(handler::users::update_senior_mentoring_schedule).route_layer(auth_layer.clone()),
+        )
         .route(
             "/users/senior/:id/verification",
-            post(handler::users::register_senior_user_verification),
+            post(handler::users::register_senior_user_verification).route_layer(auth_layer.clone()),
         )
-        .route("/users/senior/:id/verification", get(handler::users::verify_senior_user));
+        .route(
+            "/users/senior/:id/verification",
+            get(handler::users::verify_senior_user_email).route_layer(auth_layer.clone()),
+        );
     let mentoring_routers =
         Router::new().route("/mentoring/time", get(handler::mentoring::get_time_table));
 

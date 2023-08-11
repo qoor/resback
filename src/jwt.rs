@@ -10,7 +10,7 @@ use axum::{
     response::IntoResponse,
     RequestPartsExt, TypedHeader,
 };
-use axum_extra::extract::CookieJar;
+use axum_extra::extract::{cookie::Cookie, CookieJar};
 use chrono::{Duration, Utc};
 use jsonwebtoken::{DecodingKey, EncodingKey};
 use serde::{Deserialize, Serialize};
@@ -165,4 +165,20 @@ pub async fn authorize_user<B>(
 
     // Execute the next middleware
     Ok(next.run(req).await)
+}
+
+pub async fn logout_user(
+    cookie_jar: CookieJar,
+    public_key: &DecodingKey,
+) -> Result<(UserType, UserId, CookieJar)> {
+    let access_token = cookie_jar.get(ACCESS_TOKEN_COOKIE).ok_or(Error::TokenNotExists)?;
+    let _refresh_token = cookie_jar.get(REFRESH_TOKEN_COOKIE).ok_or(Error::TokenNotExists)?;
+
+    let (user_type, id) = Token::from_encoded_token(Some(access_token.value()), public_key)
+        .map(|token| (token.user_type(), token.user_id()))?;
+
+    let access_token = Cookie::build(ACCESS_TOKEN_COOKIE, "").path("/").finish();
+    let refresh_token = Cookie::build(REFRESH_TOKEN_COOKIE, "").path("/").finish();
+
+    Ok((user_type, id, cookie_jar.remove(access_token).remove(refresh_token)))
 }

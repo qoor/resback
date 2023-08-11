@@ -5,13 +5,15 @@ use std::sync::Arc;
 use axum::{
     extract::{Path, Query, State},
     response::IntoResponse,
-    Json,
+    Extension, Json,
 };
+use axum_extra::extract::CookieJar;
 use axum_typed_multipart::TypedMultipart;
 use tokio::{fs, io};
 
 use crate::{
     error::Error,
+    jwt,
     schema::{
         EmailVerificationSchema, NormalUserInfoSchema, NormalUserUpdateSchema,
         SeniorRegisterSchema, SeniorSearchSchema, SeniorUserInfoSchema, SeniorUserScheduleSchema,
@@ -43,9 +45,18 @@ pub async fn get_senior_user_info(
 
 pub async fn update_senior_user_profile(
     Path(id): Path<UserId>,
+    Extension(user): Extension<SeniorUser>,
     State(data): State<Arc<AppState>>,
     TypedMultipart(update_data): TypedMultipart<SeniorUserUpdateSchema>,
 ) -> Result<impl IntoResponse> {
+    if id != user.id() {
+        return Err(Error::InvalidRequestData {
+            data: ":id".to_string(),
+            expected: "(current user id)".to_string(),
+            found: id.to_string(),
+        });
+    }
+
     let user = SeniorUser::from_id(id, &data.database).await?;
 
     let picture_url = match update_data.picture {
@@ -79,12 +90,26 @@ pub async fn update_senior_user_profile(
 }
 
 pub async fn delete_senior_user(
+    cookie_jar: CookieJar,
     Path(id): Path<UserId>,
+    Extension(user): Extension<SeniorUser>,
     State(data): State<Arc<AppState>>,
 ) -> crate::Result<impl IntoResponse> {
-    SeniorUser::delete(id, &data.database)
+    if id != user.id() {
+        return Err(Error::InvalidRequestData {
+            data: ":id".to_string(),
+            expected: "(current user id)".to_string(),
+            found: id.to_string(),
+        });
+    }
+
+    let response = SeniorUser::delete(id, &data.database)
         .await
-        .map(|id| Json(UserIdentificationSchema { user_type: UserType::SeniorUser, id }))
+        .map(|id| Json(UserIdentificationSchema { user_type: UserType::SeniorUser, id }))?;
+
+    jwt::logout_user(cookie_jar, data.config.public_key.decoding_key()).await?;
+
+    Ok(response)
 }
 
 pub async fn get_normal_user_info(
@@ -97,10 +122,17 @@ pub async fn get_normal_user_info(
 
 pub async fn update_normal_user_profile(
     Path(id): Path<UserId>,
+    Extension(user): Extension<NormalUser>,
     State(data): State<Arc<AppState>>,
     TypedMultipart(update_data): TypedMultipart<NormalUserUpdateSchema>,
 ) -> Result<impl IntoResponse> {
-    let user = NormalUser::from_id(id, &data.database).await?;
+    if id != user.id() {
+        return Err(Error::InvalidRequestData {
+            data: ":id".to_string(),
+            expected: "(current user id)".to_string(),
+            found: id.to_string(),
+        });
+    }
 
     let picture_url = match update_data.picture {
         Some(picture) => {
@@ -125,12 +157,26 @@ pub async fn update_normal_user_profile(
 }
 
 pub async fn delete_normal_user(
+    cookie_jar: CookieJar,
     Path(id): Path<UserId>,
+    Extension(user): Extension<NormalUser>,
     State(data): State<Arc<AppState>>,
 ) -> crate::Result<impl IntoResponse> {
-    NormalUser::delete(id, &data.database)
+    if id != user.id() {
+        return Err(Error::InvalidRequestData {
+            data: ":id".to_string(),
+            expected: "(current user id)".to_string(),
+            found: id.to_string(),
+        });
+    }
+
+    let response = NormalUser::delete(id, &data.database)
         .await
-        .map(|id| Json(UserIdentificationSchema { user_type: UserType::NormalUser, id }))
+        .map(|id| Json(UserIdentificationSchema { user_type: UserType::NormalUser, id }))?;
+
+    jwt::logout_user(cookie_jar, data.config.public_key.decoding_key()).await?;
+
+    Ok(response)
 }
 
 pub async fn get_seniors(
@@ -154,10 +200,18 @@ pub async fn get_senior_mentoring_schedule(
 
 pub async fn update_senior_mentoring_schedule(
     Path(id): Path<UserId>,
+    Extension(user): Extension<SeniorUser>,
     State(data): State<Arc<AppState>>,
     TypedMultipart(update_data): TypedMultipart<SeniorUserScheduleUpdateSchema>,
 ) -> crate::Result<impl IntoResponse> {
-    let user = SeniorUser::from_id(id, &data.database).await?;
+    if id != user.id() {
+        return Err(Error::InvalidRequestData {
+            data: ":id".to_string(),
+            expected: "(current user id)".to_string(),
+            found: id.to_string(),
+        });
+    }
+
     let schedule = MentoringSchedule::from_senior_user(&user, &data.database).await?;
     let method: MentoringMethodKind = update_data.method.try_into().map_err(Error::Unhandled)?;
 
@@ -170,9 +224,17 @@ pub async fn update_senior_mentoring_schedule(
 
 pub async fn register_senior_user_verification(
     Path(id): Path<UserId>,
+    Extension(user): Extension<SeniorUser>,
     State(data): State<Arc<AppState>>,
 ) -> crate::Result<impl IntoResponse> {
-    let user = SeniorUser::from_id(id, &data.database).await?;
+    if id != user.id() {
+        return Err(Error::InvalidRequestData {
+            data: ":id".to_string(),
+            expected: "(current user id)".to_string(),
+            found: id.to_string(),
+        });
+    }
+
     let verification_code = user.register_verification(&data.database).await?;
 
     data.ses
@@ -195,12 +257,19 @@ pub async fn register_senior_user_verification(
     Ok(Json(UserIdentificationSchema { user_type: UserType::SeniorUser, id }))
 }
 
-pub async fn verify_senior_user(
+pub async fn verify_senior_user_email(
     Path(id): Path<UserId>,
     Query(payload): Query<EmailVerificationSchema>,
+    Extension(user): Extension<SeniorUser>,
     State(data): State<Arc<AppState>>,
 ) -> crate::Result<impl IntoResponse> {
-    let user = SeniorUser::from_id(id, &data.database).await?;
+    if id != user.id() {
+        return Err(Error::InvalidRequestData {
+            data: ":id".to_string(),
+            expected: "(current user id)".to_string(),
+            found: id.to_string(),
+        });
+    }
 
     user.verify_email(&payload.code, &data.database)
         .await
