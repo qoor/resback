@@ -1,8 +1,9 @@
 // Copyright 2023. The resback authors all rights reserved.
 
 use axum::{async_trait, extract::multipart};
-use axum_typed_multipart::{FieldData, TempFile, TryFromMultipart, TypedMultipartError};
+use axum_typed_multipart::{FieldData, TryFromMultipart, TypedMultipartError};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use tempfile::NamedTempFile;
 
 use crate::{
     oauth::OAuthProvider,
@@ -78,13 +79,13 @@ pub struct SeniorSearchResultSchema {
 #[derive(TryFromMultipart)]
 pub struct NormalUserUpdateSchema {
     pub nickname: String,
-    pub picture: Option<FieldData<TempFile>>,
+    pub picture: Option<FieldData<NamedTempFile>>,
 }
 
 #[derive(TryFromMultipart)]
 pub struct SeniorUserUpdateSchema {
     pub nickname: String,
-    pub picture: Option<FieldData<TempFile>>,
+    pub picture: Option<FieldData<NamedTempFile>>,
     pub major: String,
     pub experience_years: i32,
     pub mentoring_price: i32,
@@ -115,7 +116,10 @@ impl<T: Serialize> std::fmt::Display for JsonArray<T> {
 
 #[async_trait]
 impl<T: DeserializeOwned> axum_typed_multipart::TryFromField for JsonArray<T> {
-    async fn try_from_field(field: multipart::Field<'_>) -> Result<Self, TypedMultipartError> {
+    async fn try_from_field(
+        field: multipart::Field<'_>,
+        _limit_bytes: Option<usize>,
+    ) -> Result<Self, TypedMultipartError> {
         let field_name = field.name().unwrap_or("{unknown}").to_string();
         let field_text = field.text().await?;
 

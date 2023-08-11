@@ -2,185 +2,114 @@
 
 use axum::{http::StatusCode, response::IntoResponse, Json};
 use serde::Serialize;
+use tracing::error;
 
 use crate::user::{account::UserId, UserType};
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Status {
-    Error,
-    Fail,
-}
-
-#[derive(Debug, Serialize)]
-pub struct ErrorResponse {
-    pub status: Status,
-    pub message: String,
-}
-
-impl IntoResponse for ErrorResponse {
-    fn into_response(self) -> axum::response::Response {
-        Json(self).into_response()
-    }
-}
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 pub(crate) type BoxDynError = Box<dyn std::error::Error + Send + Sync + 'static>;
 
-#[derive(Debug)]
+#[derive(thiserror::Error, Debug)]
 pub enum Error {
-    Database(sqlx::Error),
+    #[error("an error occurred with the database")]
+    Database(#[from] sqlx::Error),
+    #[error("an error occurred with the JWT token")]
     Token(jsonwebtoken::errors::Error),
+    #[error("invalid token")]
     InvalidToken,
+    #[error("token does not exist")]
     TokenNotExists,
+    #[error("authentication required")]
     Unauthorized,
+    #[error("verification failed")]
+    Verification,
+    #[error("the verification code has been expired")]
     VerificationExpired,
+    #[error("{} user {id} not found", match user_type {
+        UserType::SeniorUser => "senior",
+        UserType::NormalUser => "normal"
+    })]
     UserNotFound { user_type: UserType, id: UserId },
-    InvalidRequestData,
-    LoginFail,
-    HashFail(argon2::password_hash::Error),
-    UploadFail { path: std::path::PathBuf, source: BoxDynError },
-    FileToStreamFail { path: std::path::PathBuf, source: BoxDynError },
-    SendMailFail(BoxDynError),
-    PersistFileFail(BoxDynError),
+    #[error("invalid request data {data} (expected {expected:?} found {found:?})")]
+    InvalidRequestData { data: String, expected: String, found: String },
+    #[error("login failed")]
+    Login,
+    #[error("an error occurred while handling the password")]
+    Hash(argon2::password_hash::Error),
+    #[error("failed to upload file")]
+    Upload { path: std::path::PathBuf, source: BoxDynError },
+    #[error("an error occurred while processing the file to be uploaded")]
+    FileToStream { path: std::path::PathBuf, source: BoxDynError },
+    #[error("an error occurred while sending the email")]
+    SendMail(BoxDynError),
+    #[error("an error occurred while processing the file to be uploaded")]
+    PersistFile { path: std::path::PathBuf, source: BoxDynError },
+    #[error("an error occurred while processing the file to be uploaded")]
     Io { path: std::path::PathBuf, source: std::io::Error },
-    UnhandledException(BoxDynError),
+    #[error("unhandled exception")]
+    Unhandled(BoxDynError),
 }
 
 impl Error {
-    fn to_response(&self) -> (StatusCode, ErrorResponse) {
+    fn status(&self) -> StatusCode {
         match self {
-            Error::Database(err) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorResponse { status: Status::Error, message: format!("database error: {err}") },
-            ),
-            Error::InvalidToken => (
-                StatusCode::BAD_REQUEST,
-                ErrorResponse { status: Status::Fail, message: "invalid token".to_string() },
-            ),
-            Error::Token(err) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorResponse {
-                    status: Status::Error,
-                    message: format!("failed to handle token: {err}"),
-                },
-            ),
-            Error::TokenNotExists => (
-                StatusCode::BAD_REQUEST,
-                ErrorResponse { status: Status::Fail, message: "token does not exist".to_string() },
-            ),
-            Error::Unauthorized => (
-                StatusCode::UNAUTHORIZED,
-                ErrorResponse {
-                    status: Status::Fail,
-                    message: "token is invalid or expired".to_string(),
-                },
-            ),
-            Error::VerificationExpired => (
-                StatusCode::UNAUTHORIZED,
-                ErrorResponse {
-                    status: Status::Fail,
-                    message: "verification code has been expired".to_string(),
-                },
-            ),
-            Error::UserNotFound { user_type, id } => (
-                StatusCode::NOT_FOUND,
-                ErrorResponse {
-                    status: Status::Fail,
-                    message: format!("user not found (type: {user_type}, id: {id})"),
-                },
-            ),
-            Error::InvalidRequestData => (
-                StatusCode::BAD_REQUEST,
-                ErrorResponse { status: Status::Fail, message: "invalid request data".to_string() },
-            ),
-            Error::LoginFail => (
-                StatusCode::BAD_REQUEST,
-                ErrorResponse {
-                    status: Status::Fail,
-                    message: "invalid email or password".to_string(),
-                },
-            ),
-            Error::HashFail(err) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorResponse {
-                    status: Status::Error,
-                    message: format!("failed to hash raw password: {err}"),
-                },
-            ),
-            Error::UploadFail { path, source } => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorResponse {
-                    status: Status::Error,
-                    message: format!("failed to upload file {}: {source}", path.to_string_lossy(),),
-                },
-            ),
-            Error::FileToStreamFail { path, source } => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorResponse {
-                    status: Status::Error,
-                    message: format!(
-                        "failed to create byte stream from file {}: {source}",
-                        path.to_string_lossy()
-                    ),
-                },
-            ),
-            Error::SendMailFail(err) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorResponse {
-                    status: Status::Error,
-                    message: format!("failed to send email: {err}"),
-                },
-            ),
-            Error::PersistFileFail(err) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorResponse {
-                    status: Status::Error,
-                    message: format!("failed to persist temporary file: {err}"),
-                },
-            ),
-            Error::Io { path, source } => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorResponse {
-                    status: Status::Error,
-                    message: format!("{} I/O failed: {source}", path.to_string_lossy()),
-                },
-            ),
-            Error::UnhandledException(err) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                ErrorResponse {
-                    status: Status::Error,
-                    message: format!("unhandled exception: {err}"),
-                },
-            ),
+            Error::Database(_err) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::InvalidToken => StatusCode::BAD_REQUEST,
+            Error::Token(_err) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::TokenNotExists => StatusCode::BAD_REQUEST,
+            Error::Unauthorized => StatusCode::UNAUTHORIZED,
+            Error::Verification => StatusCode::UNAUTHORIZED,
+            Error::VerificationExpired => StatusCode::GONE,
+            Error::UserNotFound { user_type: _, id: _ } => StatusCode::NOT_FOUND,
+            Error::InvalidRequestData { data: _field, expected: _, found: _ } => {
+                StatusCode::BAD_REQUEST
+            }
+            Error::Login => StatusCode::UNAUTHORIZED,
+            Error::Hash(_err) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::Upload { path: _, source: _ } => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::FileToStream { path: _, source: _ } => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::SendMail(_err) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::PersistFile { path: _, source: _ } => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::Io { path: _, source: _ } => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::Unhandled(_err) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }
 
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self.to_response())
-    }
-}
-
-impl std::error::Error for Error {}
-
 impl IntoResponse for Error {
     fn into_response(self) -> axum::response::Response {
-        self.to_response().into_response()
-    }
-}
+        match self {
+            Error::Database(ref err) => error!("database error: {err}"),
+            Error::Token(ref err) => error!("jsonwebtoken error: {err}"),
+            Error::Hash(ref err) => error!("argon2 hash error: {err}"),
+            Error::Upload { ref path, ref source } => {
+                error!("failed to upload file {}: {source}", path.to_string_lossy())
+            }
+            Error::FileToStream { ref path, ref source } => {
+                error!(
+                    "failed to create byte stream from file {}: {source}",
+                    path.to_string_lossy()
+                )
+            }
+            Error::SendMail(ref err) => error!("failed to send the mail: {}", err),
+            Error::PersistFile { ref path, ref source } => {
+                error!("failed to persist the file {}: {source}", path.to_string_lossy())
+            }
+            Error::Io { ref path, ref source } => {
+                error!("{} I/O error: {source}", path.to_string_lossy())
+            }
+            Error::Unhandled(ref err) => error!("unhandled error: {err}"),
 
-impl From<sqlx::Error> for Error {
-    fn from(value: sqlx::Error) -> Self {
-        Self::Database(value)
-    }
-}
+            _ => (),
+        }
 
-impl From<argon2::password_hash::Error> for Error {
-    fn from(value: argon2::password_hash::Error) -> Self {
-        Self::HashFail(value)
+        #[derive(Serialize)]
+        struct ErrorResponse {
+            message: String,
+        }
+
+        (self.status(), Json(ErrorResponse { message: self.to_string() })).into_response()
     }
 }
 
@@ -190,5 +119,11 @@ impl From<jsonwebtoken::errors::Error> for Error {
             jsonwebtoken::errors::ErrorKind::InvalidToken => Self::InvalidToken,
             _ => Self::Token(value),
         }
+    }
+}
+
+impl From<argon2::password_hash::Error> for Error {
+    fn from(value: argon2::password_hash::Error) -> Self {
+        Self::Hash(value)
     }
 }

@@ -103,9 +103,8 @@ impl Token {
         .map(|token| token.claims)?;
 
         let user_id =
-            claims.sub.parse::<UserId>().map_err(|err| Error::UnhandledException(Box::new(err)))?;
-        let user_type: UserType =
-            claims.nonce.parse::<UserType>().map_err(Error::UnhandledException)?;
+            claims.sub.parse::<UserId>().map_err(|err| Error::Unhandled(Box::new(err)))?;
+        let user_type: UserType = claims.nonce.parse::<UserType>().map_err(Error::Unhandled)?;
 
         Ok(Token { claims, encoded_token, user_id, user_type })
     }

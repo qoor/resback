@@ -24,8 +24,9 @@ impl S3Client {
     }
 
     pub async fn push_file(&self, file_path: &Path, target_path: &str) -> Result<String> {
-        let body = ByteStream::from_path(&file_path).await.map_err(|err| {
-            Error::FileToStreamFail { path: file_path.to_path_buf(), source: Box::new(err) }
+        let body = ByteStream::from_path(&file_path).await.map_err(|err| Error::FileToStream {
+            path: file_path.to_path_buf(),
+            source: Box::new(err),
         })?;
 
         self.client
@@ -35,7 +36,7 @@ impl S3Client {
             .body(body)
             .send()
             .await
-            .map_err(|err| Error::UploadFail {
+            .map_err(|err| Error::Upload {
                 path: file_path.to_path_buf(),
                 source: Box::new(err),
             })?;
@@ -78,7 +79,7 @@ impl SesClient {
             .content(content)
             .send()
             .await
-            .map_err(|err| Error::SendMailFail(Box::new(err)))?;
+            .map_err(|err| Error::SendMail(Box::new(err)))?;
 
         Ok(())
     }

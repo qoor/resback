@@ -2117,6 +2117,7 @@ dependencies = [
  "serde_json",
  "sqlx",
  "tempfile",
+ "thiserror",
  "time 0.3.25",
  "tokio",
  "tower",

@@ -53,11 +53,10 @@ pub async fn update_senior_user_profile(
             let (temp_path, path_to_push) =
                 get_user_picture_paths(&UserType::SeniorUser, &id).await?;
 
-            picture
-                .contents
-                .persist(&temp_path, true)
-                .await
-                .map_err(|err| Error::PersistFileFail(err.into()))?;
+            picture.contents.persist(&temp_path).map_err(|err| Error::PersistFile {
+                path: temp_path.to_path_buf(),
+                source: err.into(),
+            })?;
 
             data.s3.push_file(&temp_path, &path_to_push).await?
         }
@@ -108,11 +107,11 @@ pub async fn update_normal_user_profile(
             let (temp_path, path_to_push) =
                 get_user_picture_paths(&UserType::NormalUser, &id).await?;
 
-            picture
-                .contents
-                .persist(&temp_path, true)
-                .await
-                .map_err(|err| Error::PersistFileFail(err.into()))?;
+            picture.contents.persist(&temp_path).map_err(|err| Error::PersistFile {
+                path: temp_path.to_path_buf(),
+                source: err.into(),
+            })?;
+
             data.s3.push_file(&temp_path, &path_to_push).await?
         }
         None => user.picture().to_string(),
@@ -160,8 +159,7 @@ pub async fn update_senior_mentoring_schedule(
 ) -> crate::Result<impl IntoResponse> {
     let user = SeniorUser::from_id(id, &data.database).await?;
     let schedule = MentoringSchedule::from_senior_user(&user, &data.database).await?;
-    let method: MentoringMethodKind =
-        update_data.method.try_into().map_err(Error::UnhandledException)?;
+    let method: MentoringMethodKind = update_data.method.try_into().map_err(Error::Unhandled)?;
 
     schedule.update(&update_data, &data.database).await?;
     user.update_mentoring_data(&method, update_data.status, update_data.always_on, &data.database)

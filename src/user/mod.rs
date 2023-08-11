@@ -38,7 +38,10 @@ impl std::fmt::Display for UserType {
 
 #[async_trait]
 impl axum_typed_multipart::TryFromField for UserType {
-    async fn try_from_field(field: multipart::Field<'_>) -> Result<Self, TypedMultipartError> {
+    async fn try_from_field(
+        field: multipart::Field<'_>,
+        _limit_bytes: Option<usize>,
+    ) -> Result<Self, TypedMultipartError> {
         let field_name = field.name().unwrap_or("{unknown}").to_string();
         let field_text = field.text().await?;
 

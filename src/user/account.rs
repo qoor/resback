@@ -81,7 +81,7 @@ impl NormalUser {
         )
         .fetch_optional(pool)
         .await?
-        .ok_or(Error::LoginFail)
+        .ok_or(Error::Login)
     }
 
     pub async fn update_profile(
@@ -119,7 +119,7 @@ impl User for NormalUser {
         sqlx::query_as_unchecked!(Self, "SELECT * FROM normal_users WHERE id = ?", id)
             .fetch_optional(pool)
             .await?
-            .ok_or(Error::LoginFail)
+            .ok_or(Error::Login)
     }
 
     async fn update_refresh_token(&self, token: &str, pool: &sqlx::Pool<MySql>) -> Result<&Self> {
@@ -184,8 +184,20 @@ impl SeniorUser {
         register_data: &SeniorRegisterSchema,
         pool: &sqlx::Pool<MySql>,
     ) -> Result<UserId> {
-        if register_data.email.is_empty() || register_data.password.is_empty() {
-            return Err(Error::InvalidRequestData);
+        if register_data.email.is_empty() {
+            return Err(Error::InvalidRequestData {
+                data: "email".to_string(),
+                expected: "(not null)".to_string(),
+                found: "(null)".to_string(),
+            });
+        }
+
+        if register_data.password.is_empty() {
+            return Err(Error::InvalidRequestData {
+                data: "password".to_string(),
+                expected: "(not null)".to_string(),
+                found: "(null)".to_string(),
+            });
         }
 
         let salt = SaltString::generate(&mut OsRng);
@@ -233,17 +245,29 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     }
 
     pub async fn login(email: &str, password: &str, pool: &sqlx::Pool<MySql>) -> Result<Self> {
-        if email.is_empty() || password.is_empty() {
-            return Err(Error::InvalidRequestData);
+        if email.is_empty() {
+            return Err(Error::InvalidRequestData {
+                data: "email".to_string(),
+                expected: "(not null)".to_string(),
+                found: "(null)".to_string(),
+            });
+        }
+
+        if password.is_empty() {
+            return Err(Error::InvalidRequestData {
+                data: "password".to_string(),
+                expected: "(not null)".to_string(),
+                found: "(null)".to_string(),
+            });
         }
 
         let user =
             sqlx::query_as_unchecked!(Self, "SELECT * FROM senior_users WHERE email = ?", email)
                 .fetch_optional(pool)
                 .await?
-                .ok_or(Error::LoginFail)?;
+                .ok_or(Error::Login)?;
 
-        let password_verified = match PasswordHash::new(&user.password) {
+        match PasswordHash::new(&user.password) {
             Ok(parsed_hash) => Argon2::new_with_secret(
                 PEPPER.as_bytes(),
                 argon2::Algorithm::default(),
@@ -251,14 +275,9 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 argon2::Params::default(),
             )
             .unwrap()
-            .verify_password(password.as_bytes(), &parsed_hash)
-            .map_or(false, |_| true),
-            Err(_) => false,
-        };
-
-        if !password_verified {
-            return Err(Error::LoginFail);
-        }
+            .verify_password(password.as_bytes(), &parsed_hash),
+            Err(err) => Err(err),
+        }?;
 
         Ok(user)
     }
@@ -484,9 +503,9 @@ impl EmailVerification {
         match (chrono::Utc::now() - self.created_at).num_minutes() {
             minutes if minutes < 3 => match self.code == input {
                 true => self.delete(pool).await,
-                false => Err(Error::Unauthorized),
+                false => Err(Error::Verification),
             },
-            _ => Err(Error::Unauthorized),
+            _ => Err(Error::VerificationExpired),
         }
     }
 

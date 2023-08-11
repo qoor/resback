@@ -61,6 +61,7 @@ impl TryFrom<u32> for MentoringMethodKind {
 impl axum_typed_multipart::TryFromField for MentoringMethodKind {
     async fn try_from_field(
         field: multipart::Field<'_>,
+        _limit_bytes: Option<usize>,
     ) -> std::result::Result<Self, TypedMultipartError> {
         let field_name = field.name().unwrap_or("{unknown}").to_string();
         let field_text = field.text().await?;
