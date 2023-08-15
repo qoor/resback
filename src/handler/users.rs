@@ -215,9 +215,13 @@ pub async fn update_senior_mentoring_schedule(
     let schedule = MentoringSchedule::from_senior_user(&user, &data.database).await?;
     let method: MentoringMethodKind = update_data.method.try_into().map_err(Error::Unhandled)?;
 
+    let tx = data.database.begin().await?;
+
     schedule.update(&update_data, &data.database).await?;
-    user.update_mentoring_data(&method, update_data.status, update_data.always_on, &data.database)
+    user.update_mentoring_data(method, update_data.status, update_data.always_on, &data.database)
         .await?;
+
+    tx.commit().await?;
 
     Ok(Json(UserIdentificationSchema { user_type: UserType::SeniorUser, id }))
 }

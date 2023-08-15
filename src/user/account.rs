@@ -355,7 +355,7 @@ WHERE id = ?"#,
 
     pub async fn update_mentoring_data(
         &self,
-        method: &MentoringMethodKind,
+        method: MentoringMethodKind,
         status: bool,
         always_on: bool,
         pool: &sqlx::Pool<MySql>,
@@ -486,6 +486,8 @@ impl EmailVerification {
     async fn generate(senior_user: &SeniorUser, pool: &sqlx::Pool<MySql>) -> Result<Self> {
         let code = format!("{:06}", rand::thread_rng().gen_range(0..=999999));
 
+        let tx = pool.begin().await?;
+
         Self::delete_senior_id(senior_user.id, pool).await?;
 
         sqlx::query!(
@@ -496,7 +498,11 @@ impl EmailVerification {
         .execute(pool)
         .await?;
 
-        Self::from_senior_user(senior_user, pool).await
+        let result = Self::from_senior_user(senior_user, pool).await;
+
+        tx.commit().await?;
+
+        result
     }
 
     async fn verify(self, input: &str, pool: &sqlx::Pool<MySql>) -> Result<()> {
