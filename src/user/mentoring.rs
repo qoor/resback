@@ -45,14 +45,11 @@ impl FromStr for MentoringMethodKind {
     }
 }
 
-impl TryFrom<u32> for MentoringMethodKind {
-    type Error = BoxDynError;
-
-    fn try_from(value: u32) -> std::result::Result<Self, Self::Error> {
+impl From<u32> for MentoringMethodKind {
+    fn from(value: u32) -> Self {
         match value {
-            1 => Ok(MentoringMethodKind::VideoCall),
-            2 => Ok(MentoringMethodKind::VoiceCall),
-            _ => Err("Invalid mentoring method id")?,
+            2 => MentoringMethodKind::VoiceCall,
+            _ => MentoringMethodKind::VideoCall,
         }
     }
 }
@@ -83,7 +80,7 @@ pub struct MentoringTime {
 
 impl MentoringTime {
     pub async fn get_all(pool: &sqlx::Pool<MySql>) -> Result<Vec<Self>> {
-        Ok(sqlx::query_as_unchecked!(Self, "SELECT * FROM mentoring_time").fetch_all(pool).await?)
+        Ok(sqlx::query_as!(Self, "SELECT * FROM mentoring_time").fetch_all(pool).await?)
     }
 }
 
@@ -98,7 +95,7 @@ pub struct MentoringMethod {
 impl MentoringMethod {
     #[allow(dead_code)]
     pub async fn from_kind(kind: MentoringMethodKind, pool: &sqlx::Pool<MySql>) -> Result<Self> {
-        Ok(sqlx::query_as_unchecked!(
+        Ok(sqlx::query_as!(
             Self,
             "SELECT id as kind, name FROM mentoring_method WHERE id = ?",
             kind
@@ -109,7 +106,7 @@ impl MentoringMethod {
 
     #[allow(dead_code)]
     pub async fn from_name(name: &str, pool: &sqlx::Pool<MySql>) -> Result<Self> {
-        Ok(sqlx::query_as_unchecked!(
+        Ok(sqlx::query_as!(
             Self,
             "SELECT id as kind, name FROM mentoring_method WHERE name = ?",
             name

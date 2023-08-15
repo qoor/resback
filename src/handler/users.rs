@@ -213,7 +213,7 @@ pub async fn update_senior_mentoring_schedule(
     }
 
     let schedule = MentoringSchedule::from_senior_user(&user, &data.database).await?;
-    let method: MentoringMethodKind = update_data.method.try_into().map_err(Error::Unhandled)?;
+    let method: MentoringMethodKind = update_data.method.into();
 
     let tx = data.database.begin().await?;
 

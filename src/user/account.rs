@@ -12,13 +12,14 @@ use sqlx::{
 use crate::{
     error::Error,
     nickname::{self, KoreanGenerator},
+    oauth::OAuthProvider,
     schema::{
         JsonArray, NormalUserInfoSchema, SeniorRegisterSchema, SeniorSearchResultSchema,
         SeniorSearchSchema, SeniorUserInfoSchema,
     },
     user::{picture::get_random_user_picture_url, UserType},
+    Result,
 };
-use crate::{oauth::OAuthProvider, Result};
 
 use super::{mentoring::MentoringMethodKind, OAuthUserData};
 
@@ -73,9 +74,17 @@ impl NormalUser {
         oauth_user: &OAuthUserData,
         pool: &sqlx::Pool<MySql>,
     ) -> Result<Self> {
-        sqlx::query_as_unchecked!(
+        sqlx::query_as!(
             Self,
-            "SELECT * FROM normal_users WHERE oauth_provider = ? AND oauth_id = ?",
+            "SELECT
+id,
+oauth_provider as `oauth_provider: OAuthProvider`,
+oauth_id,
+nickname,
+picture,
+refresh_token,
+created_at,
+updated_at FROM normal_users WHERE oauth_provider = ? AND oauth_id = ?",
             oauth_user.provider(),
             oauth_user.id()
         )
@@ -116,10 +125,22 @@ impl User for NormalUser {
     }
 
     async fn from_id(id: UserId, pool: &sqlx::Pool<MySql>) -> Result<Self> {
-        sqlx::query_as_unchecked!(Self, "SELECT * FROM normal_users WHERE id = ?", id)
-            .fetch_optional(pool)
-            .await?
-            .ok_or(Error::Login)
+        sqlx::query_as!(
+            Self,
+            "SELECT
+id,
+oauth_provider as `oauth_provider: OAuthProvider`,
+oauth_id,
+nickname,
+picture,
+refresh_token,
+created_at,
+updated_at FROM normal_users WHERE id = ?",
+            id
+        )
+        .fetch_optional(pool)
+        .await?
+        .ok_or(Error::Login)
     }
 
     async fn update_refresh_token(&self, token: &str, pool: &sqlx::Pool<MySql>) -> Result<&Self> {
@@ -261,11 +282,33 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             });
         }
 
-        let user =
-            sqlx::query_as_unchecked!(Self, "SELECT * FROM senior_users WHERE email = ?", email)
-                .fetch_optional(pool)
-                .await?
-                .ok_or(Error::Login)?;
+        let user = sqlx::query_as!(
+            Self,
+            "SELECT
+id,
+email,
+password,
+name,
+phone,
+nickname,
+picture,
+major,
+experience_years,
+mentoring_price,
+representative_careers,
+description,
+mentoring_method_id,
+mentoring_status as `mentoring_status: bool`,
+mentoring_always_on as `mentoring_always_on: bool`,
+email_verified as `email_verified: bool`,
+refresh_token,
+created_at,
+updated_at FROM senior_users WHERE email = ?",
+            email
+        )
+        .fetch_optional(pool)
+        .await?
+        .ok_or(Error::Login)?;
 
         match PasswordHash::new(&user.password) {
             Ok(parsed_hash) => Argon2::new_with_secret(
@@ -423,10 +466,33 @@ impl User for SeniorUser {
     }
 
     async fn from_id(id: UserId, pool: &sqlx::Pool<MySql>) -> Result<Self> {
-        sqlx::query_as_unchecked!(Self, "SELECT * FROM senior_users WHERE id = ?", id)
-            .fetch_optional(pool)
-            .await?
-            .ok_or(Error::UserNotFound { user_type: UserType::SeniorUser, id })
+        sqlx::query_as!(
+            Self,
+            "SELECT
+id,
+email,
+password,
+name,
+phone,
+nickname,
+picture,
+major,
+experience_years,
+mentoring_price,
+representative_careers,
+description,
+mentoring_method_id,
+mentoring_status as `mentoring_status: bool`,
+mentoring_always_on as `mentoring_always_on: bool`,
+email_verified as `email_verified: bool`,
+refresh_token,
+created_at,
+updated_at FROM senior_users WHERE id = ?",
+            id
+        )
+        .fetch_optional(pool)
+        .await?
+        .ok_or(Error::UserNotFound { user_type: UserType::SeniorUser, id })
     }
 
     async fn update_refresh_token(&self, token: &str, pool: &sqlx::Pool<MySql>) -> Result<&Self> {
@@ -520,13 +586,9 @@ impl EmailVerification {
     }
 
     async fn from_senior_id(senior_id: UserId, pool: &sqlx::Pool<MySql>) -> Result<Self> {
-        Ok(sqlx::query_as_unchecked!(
-            Self,
-            "SELECT * FROM email_verification WHERE senior_id = ?",
-            senior_id
-        )
-        .fetch_one(pool)
-        .await?)
+        Ok(sqlx::query_as!(Self, "SELECT * FROM email_verification WHERE senior_id = ?", senior_id)
+            .fetch_one(pool)
+            .await?)
     }
 
     async fn delete(self, pool: &sqlx::Pool<MySql>) -> Result<()> {
