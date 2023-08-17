@@ -2,12 +2,14 @@
 # See also https://rust-lang.github.io/rustfmt
 
 # Version of the formatting rules to use.
-version = "Two"
+# NOTE: Nightly only
+#version = "Two"
 
 # Line endings will be converted to \n.
 newline_style = "Unix"
 
-wrap_comments = true
+# NOTE: Nightly only
+#wrap_comments = true
 
 # The "Default" setting has a heuristic which splits lines too aggresively.
 # We are willing to revisit this setting in future versions of rustfmt.
