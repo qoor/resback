@@ -233,9 +233,9 @@ pub async fn register_senior_user_verification(
 
 pub async fn verify_senior_user_email(
     Path(id): Path<UserId>,
-    Query(payload): Query<EmailVerificationSchema>,
     Extension(user): Extension<SeniorUser>,
     State(data): State<Arc<AppState>>,
+    TypedMultipart(payload): TypedMultipart<EmailVerificationSchema>,
 ) -> Result<impl IntoResponse> {
     validate_user_id(id, &user)?;
 

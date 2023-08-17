@@ -160,7 +160,7 @@ pub struct SeniorUserScheduleUpdateSchema {
     pub always_on: bool,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(TryFromMultipart, Debug)]
 pub struct EmailVerificationSchema {
     pub code: String,
 }

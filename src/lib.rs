@@ -95,7 +95,7 @@ pub async fn app(config: &Config, pool: &sqlx::Pool<MySql>) -> Router {
         )
         .route(
             "/users/senior/:id/verification",
-            get(handler::users::verify_senior_user_email).route_layer(auth_layer.clone()),
+            patch(handler::users::verify_senior_user_email).route_layer(auth_layer.clone()),
         )
         .route(
             "/users/senior/:id/mentoring/order",
