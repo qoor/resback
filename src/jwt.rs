@@ -126,7 +126,7 @@ impl Token {
     }
 }
 
-pub async fn authorize_user<B>(
+pub async fn authorize_user_middleware<B>(
     cookies: CookieJar,
     State(data): State<Arc<AppState>>,
     req: Request<B>,
@@ -138,18 +138,9 @@ pub async fn authorize_user<B>(
     //
     // If the access token does not exists as cookie, try to find it in the
     // Authorization header in HTTP headers
-    let access_token = match cookies.get(ACCESS_TOKEN_COOKIE) {
-        Some(access_token) => Some(access_token.value().to_string()),
-        None => parts
-            .extract::<TypedHeader<Authorization<Bearer>>>()
-            .await
-            .ok()
-            .map(|auth_value| auth_value.token().to_string()),
-    };
-
-    let (user_id, user_type) =
-        Token::from_encoded_token(access_token.as_deref(), data.config.public_key.decoding_key())
-            .map(|token| (token.user_id(), token.user_type()))?;
+    let auth_header = parts.extract::<TypedHeader<Authorization<Bearer>>>().await.ok();
+    let (user_type, user_id) =
+        authorize_user(cookies, auth_header, data.config.public_key.decoding_key()).await?;
 
     let mut req = Request::from_parts(parts, body);
 
@@ -165,6 +156,24 @@ pub async fn authorize_user<B>(
 
     // Execute the next middleware
     Ok(next.run(req).await)
+}
+
+pub async fn authorize_user(
+    cookies: CookieJar,
+    auth_header: Option<TypedHeader<Authorization<Bearer>>>,
+    public_key: &DecodingKey,
+) -> Result<(UserType, UserId)> {
+    // Find the access token in the cookies
+    //
+    // If the access token does not exists as cookie, try to find it in the
+    // Authorization header in HTTP headers
+    let access_token = match cookies.get(ACCESS_TOKEN_COOKIE) {
+        Some(access_token) => Some(access_token.value().to_string()),
+        None => auth_header.map(|token| token.token().to_string()),
+    };
+
+    Token::from_encoded_token(access_token.as_deref(), public_key)
+        .map(|token| (token.user_type(), token.user_id()))
 }
 
 pub async fn logout_user(

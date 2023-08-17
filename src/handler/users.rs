@@ -14,14 +14,18 @@ use tokio::{fs, io};
 use crate::{
     error::Error,
     jwt,
+    mentoring::{order::MentoringOrder, schedule::MentoringSchedule, MentoringMethodKind},
     schema::{
-        EmailVerificationSchema, NormalUserInfoSchema, NormalUserUpdateSchema,
-        SeniorRegisterSchema, SeniorSearchSchema, SeniorUserInfoSchema, SeniorUserScheduleSchema,
-        SeniorUserScheduleUpdateSchema, SeniorUserUpdateSchema, UserIdentificationSchema,
+        EmailVerificationSchema, MentoringOrderListSchema, NormalUserInfoSchema,
+        NormalUserUpdateSchema, SeniorRegisterSchema, SeniorSearchSchema, SeniorUserInfoSchema,
+        SeniorUserScheduleSchema, SeniorUserScheduleUpdateSchema, SeniorUserUpdateSchema,
+        UserIdentificationSchema,
     },
     user::{
-        account::{NormalUser, NormalUserUpdate, SeniorUser, SeniorUserUpdate, User, UserId},
-        mentoring::{MentoringMethodKind, MentoringSchedule},
+        account::{
+            validate_user_id, NormalUser, NormalUserUpdate, SeniorUser, SeniorUserUpdate, User,
+            UserId,
+        },
         UserType,
     },
     AppState, Result,
@@ -32,6 +36,7 @@ pub async fn register_senior_user(
     TypedMultipart(register_data): TypedMultipart<SeniorRegisterSchema>,
 ) -> Result<impl IntoResponse> {
     let id = SeniorUser::register(&register_data, &data.database).await?;
+
     Ok(Json(UserIdentificationSchema { user_type: UserType::SeniorUser, id }))
 }
 
@@ -40,6 +45,7 @@ pub async fn get_senior_user_info(
     State(data): State<Arc<AppState>>,
 ) -> crate::Result<impl IntoResponse> {
     let user = SeniorUser::from_id(id, &data.database).await?;
+
     Ok(Json(SeniorUserInfoSchema::from(user)))
 }
 
@@ -49,13 +55,7 @@ pub async fn update_senior_user_profile(
     State(data): State<Arc<AppState>>,
     TypedMultipart(update_data): TypedMultipart<SeniorUserUpdateSchema>,
 ) -> Result<impl IntoResponse> {
-    if id != user.id() {
-        return Err(Error::InvalidRequestData {
-            data: ":id".to_string(),
-            expected: "(current user id)".to_string(),
-            found: id.to_string(),
-        });
-    }
+    validate_user_id(id, &user)?;
 
     let user = SeniorUser::from_id(id, &data.database).await?;
 
@@ -95,13 +95,7 @@ pub async fn delete_senior_user(
     Extension(user): Extension<SeniorUser>,
     State(data): State<Arc<AppState>>,
 ) -> crate::Result<impl IntoResponse> {
-    if id != user.id() {
-        return Err(Error::InvalidRequestData {
-            data: ":id".to_string(),
-            expected: "(current user id)".to_string(),
-            found: id.to_string(),
-        });
-    }
+    validate_user_id(id, &user)?;
 
     let response = SeniorUser::delete(id, &data.database)
         .await
@@ -126,13 +120,7 @@ pub async fn update_normal_user_profile(
     State(data): State<Arc<AppState>>,
     TypedMultipart(update_data): TypedMultipart<NormalUserUpdateSchema>,
 ) -> Result<impl IntoResponse> {
-    if id != user.id() {
-        return Err(Error::InvalidRequestData {
-            data: ":id".to_string(),
-            expected: "(current user id)".to_string(),
-            found: id.to_string(),
-        });
-    }
+    validate_user_id(id, &user)?;
 
     let picture_url = match update_data.picture {
         Some(picture) => {
@@ -162,13 +150,7 @@ pub async fn delete_normal_user(
     Extension(user): Extension<NormalUser>,
     State(data): State<Arc<AppState>>,
 ) -> crate::Result<impl IntoResponse> {
-    if id != user.id() {
-        return Err(Error::InvalidRequestData {
-            data: ":id".to_string(),
-            expected: "(current user id)".to_string(),
-            found: id.to_string(),
-        });
-    }
+    validate_user_id(id, &user)?;
 
     let response = NormalUser::delete(id, &data.database)
         .await
@@ -204,13 +186,7 @@ pub async fn update_senior_mentoring_schedule(
     State(data): State<Arc<AppState>>,
     TypedMultipart(update_data): TypedMultipart<SeniorUserScheduleUpdateSchema>,
 ) -> crate::Result<impl IntoResponse> {
-    if id != user.id() {
-        return Err(Error::InvalidRequestData {
-            data: ":id".to_string(),
-            expected: "(current user id)".to_string(),
-            found: id.to_string(),
-        });
-    }
+    validate_user_id(id, &user)?;
 
     let schedule = MentoringSchedule::from_senior_user(&user, &data.database).await?;
     let method: MentoringMethodKind = update_data.method.into();
@@ -231,13 +207,7 @@ pub async fn register_senior_user_verification(
     Extension(user): Extension<SeniorUser>,
     State(data): State<Arc<AppState>>,
 ) -> crate::Result<impl IntoResponse> {
-    if id != user.id() {
-        return Err(Error::InvalidRequestData {
-            data: ":id".to_string(),
-            expected: "(current user id)".to_string(),
-            found: id.to_string(),
-        });
-    }
+    validate_user_id(id, &user)?;
 
     let verification_code = user.register_verification(&data.database).await?;
 
@@ -266,18 +236,38 @@ pub async fn verify_senior_user_email(
     Query(payload): Query<EmailVerificationSchema>,
     Extension(user): Extension<SeniorUser>,
     State(data): State<Arc<AppState>>,
-) -> crate::Result<impl IntoResponse> {
-    if id != user.id() {
-        return Err(Error::InvalidRequestData {
-            data: ":id".to_string(),
-            expected: "(current user id)".to_string(),
-            found: id.to_string(),
-        });
-    }
+) -> Result<impl IntoResponse> {
+    validate_user_id(id, &user)?;
 
     user.verify_email(&payload.code, &data.database)
         .await
         .map(|_| Json(UserIdentificationSchema { user_type: UserType::SeniorUser, id }))
+}
+
+pub async fn get_senior_user_mentoring_orders(
+    Path(id): Path<UserId>,
+    Extension(user): Extension<SeniorUser>,
+    State(data): State<Arc<AppState>>,
+) -> Result<impl IntoResponse> {
+    validate_user_id(id, &user)?;
+
+    let orders: MentoringOrderListSchema =
+        MentoringOrder::from_seller_id(user.id(), &data.database).await?.into();
+
+    Ok(Json(orders))
+}
+
+pub async fn get_normal_user_mentoring_orders(
+    Path(id): Path<UserId>,
+    Extension(user): Extension<NormalUser>,
+    State(data): State<Arc<AppState>>,
+) -> Result<impl IntoResponse> {
+    validate_user_id(id, &user)?;
+
+    let orders: MentoringOrderListSchema =
+        MentoringOrder::from_buyer_id(user.id(), &data.database).await?.into();
+
+    Ok(Json(orders))
 }
 
 async fn get_user_picture_paths(

@@ -1,6 +1,6 @@
 {
   "db_name": "MySQL",
-  "query": "SELECT * FROM senior_users WHERE email = ?",
+  "query": "SELECT\nid,\nemail,\npassword,\nname,\nphone,\nnickname,\npicture,\nmajor,\nexperience_years,\nmentoring_price,\nrepresentative_careers,\ndescription,\nmentoring_method_id,\nmentoring_status as `mentoring_status: bool`,\nmentoring_always_on as `mentoring_always_on: bool`,\nemail_verified as `email_verified: bool`,\nrefresh_token,\ncreated_at,\nupdated_at FROM senior_users WHERE email = ?",
   "describe": {
     "columns": [
       {
@@ -98,7 +98,7 @@
         "name": "mentoring_price",
         "type_info": {
           "type": "Long",
-          "flags": "NOT_NULL | NO_DEFAULT_VALUE",
+          "flags": "NOT_NULL | UNSIGNED | NO_DEFAULT_VALUE",
           "char_set": 63,
           "max_size": 10
         }
@@ -128,34 +128,34 @@
         "name": "mentoring_method_id",
         "type_info": {
           "type": "Long",
-          "flags": "MULTIPLE_KEY | UNSIGNED",
+          "flags": "NOT_NULL | MULTIPLE_KEY | UNSIGNED",
           "char_set": 63,
           "max_size": 10
         }
       },
       {
         "ordinal": 13,
-        "name": "mentoring_status",
+        "name": "mentoring_status: bool",
         "type_info": {
           "type": "Tiny",
-          "flags": "",
+          "flags": "NOT_NULL",
           "char_set": 63,
           "max_size": 1
         }
       },
       {
         "ordinal": 14,
-        "name": "mentoring_always_on",
+        "name": "mentoring_always_on: bool",
         "type_info": {
           "type": "Tiny",
-          "flags": "",
+          "flags": "NOT_NULL",
           "char_set": 63,
           "max_size": 1
         }
       },
       {
         "ordinal": 15,
-        "name": "email_verified",
+        "name": "email_verified: bool",
         "type_info": {
           "type": "Tiny",
           "flags": "NOT_NULL",
@@ -210,14 +210,14 @@
       false,
       false,
       false,
-      true,
-      true,
-      true,
+      false,
+      false,
+      false,
       false,
       true,
       false,
       false
     ]
   },
-  "hash": "9997ec98340005ffddf6ab2c524c9690193ec83f4321eaf4995183c11650adce"
+  "hash": "456f5cd3c08ea9283c5b43da0b04552a474646c0a081c34e5fe3dccf767126f9"
 }

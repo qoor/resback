@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "INSERT INTO mentoring_order (\nbuyer_id,\nseller_id,\ntime_id,\nmethod_id,\nprice,\ncontent) VALUES (?, ?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "5b4dcac4dad34b1fb567207c10863314f8bfb03cc2807461ce12a03ecd668b68"
+}

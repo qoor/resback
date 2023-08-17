@@ -11,6 +11,7 @@ use sqlx::{
 
 use crate::{
     error::Error,
+    mentoring::MentoringMethodKind,
     nickname::{self, KoreanGenerator},
     oauth::OAuthProvider,
     schema::{
@@ -21,7 +22,7 @@ use crate::{
     Result,
 };
 
-use super::{mentoring::MentoringMethodKind, OAuthUserData};
+use super::OAuthUserData;
 
 pub type UserId = u64;
 
@@ -188,7 +189,7 @@ pub struct SeniorUser {
     picture: String,
     major: String,
     experience_years: i32,
-    mentoring_price: i32,
+    mentoring_price: u32,
     representative_careers: String,
     description: String,
     mentoring_method_id: MentoringMethodKind,
@@ -438,6 +439,10 @@ WHERE id = ?"#,
         &self.email
     }
 
+    pub fn mentoring_price(&self) -> u32 {
+        self.mentoring_price
+    }
+
     pub fn mentoring_method(&self) -> MentoringMethodKind {
         self.mentoring_method_id
     }
@@ -600,5 +605,16 @@ impl EmailVerification {
             .execute(pool)
             .await
             .map(|_| ())?)
+    }
+}
+
+pub(crate) fn validate_user_id<T: User>(id: UserId, user: &T) -> Result<()> {
+    match id == user.id() {
+        true => Ok(()),
+        false => Err(Error::InvalidRequestData {
+            data: ":id".to_string(),
+            expected: "(current user id)".to_string(),
+            found: id.to_string(),
+        }),
     }
 }

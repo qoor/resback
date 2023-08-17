@@ -7,6 +7,7 @@ mod aws;
 mod error;
 mod handler;
 mod jwt;
+mod mentoring;
 mod nickname;
 mod oauth;
 mod schema;
@@ -51,7 +52,8 @@ pub async fn app(config: &Config, pool: &sqlx::Pool<MySql>) -> Router {
         ses: aws::SesClient::from_env().await,
     });
 
-    let auth_layer = middleware::from_fn_with_state(app_state.clone(), jwt::authorize_user);
+    let auth_layer =
+        middleware::from_fn_with_state(app_state.clone(), jwt::authorize_user_middleware);
 
     let root_routers = Router::new().route("/", get(handler::root));
     let auth_routers = Router::new()
@@ -94,9 +96,25 @@ pub async fn app(config: &Config, pool: &sqlx::Pool<MySql>) -> Router {
         .route(
             "/users/senior/:id/verification",
             get(handler::users::verify_senior_user_email).route_layer(auth_layer.clone()),
+        )
+        .route(
+            "/users/senior/:id/mentoring/order",
+            get(handler::users::get_senior_user_mentoring_orders).route_layer(auth_layer.clone()),
+        )
+        .route(
+            "/users/normal/:id/mentoring/order",
+            get(handler::users::get_normal_user_mentoring_orders).route_layer(auth_layer.clone()),
         );
-    let mentoring_routers =
-        Router::new().route("/mentoring/time", get(handler::mentoring::get_time_table));
+    let mentoring_routers = Router::new()
+        .route("/mentoring/time", get(handler::mentoring::get_time_table))
+        .route(
+            "/mentoring/order",
+            post(handler::mentoring::create_mentoring_order).route_layer(auth_layer.clone()),
+        )
+        .route(
+            "/mentoring/order",
+            get(handler::mentoring::get_mentoring_order).route_layer(auth_layer.clone()),
+        );
 
     Router::new()
         .merge(root_routers)

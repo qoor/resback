@@ -2,16 +2,17 @@
 
 use axum::{async_trait, extract::multipart};
 use axum_typed_multipart::{FieldData, TryFromMultipart, TypedMultipartError};
+use chrono::{DateTime, Utc};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use tempfile::NamedTempFile;
 
 use crate::{
-    oauth::OAuthProvider,
-    user::{
-        account::UserId,
-        mentoring::{MentoringMethodKind, MentoringSchedule, MentoringTime},
-        UserType,
+    mentoring::{
+        schedule::{MentoringSchedule, MentoringTime},
+        MentoringMethodKind,
     },
+    oauth::OAuthProvider,
+    user::{account::UserId, UserType},
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone, TryFromMultipart)]
@@ -59,7 +60,7 @@ pub struct SeniorUserInfoSchema {
     pub picture: String,
     pub major: String,
     pub experience_years: i32,
-    pub mentoring_price: i32,
+    pub mentoring_price: u32,
     pub representative_careers: JsonArray<String>,
     pub description: String,
     pub email_verified: bool,
@@ -162,4 +163,35 @@ pub struct SeniorUserScheduleUpdateSchema {
 #[derive(Debug, Deserialize)]
 pub struct EmailVerificationSchema {
     pub code: String,
+}
+
+#[derive(TryFromMultipart, Debug)]
+pub struct MentoringOrderCreationSchema {
+    pub seller_id: UserId,
+    pub time: u32,
+    pub content: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct MentoringOrderSchema {
+    pub id: u64,
+    pub buyer_id: UserId,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub seller_id: Option<UserId>,
+    pub time: u32,
+    pub method: MentoringMethodKind,
+    pub price: u32,
+    pub content: String,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct MentoringOrderListSchema {
+    pub orders: Vec<MentoringOrderSchema>,
+}
+
+impl From<Vec<MentoringOrderSchema>> for MentoringOrderListSchema {
+    fn from(value: Vec<MentoringOrderSchema>) -> Self {
+        Self { orders: value }
+    }
 }

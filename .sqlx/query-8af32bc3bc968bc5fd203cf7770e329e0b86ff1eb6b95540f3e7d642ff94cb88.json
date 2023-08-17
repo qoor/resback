@@ -1,6 +1,6 @@
 {
   "db_name": "MySQL",
-  "query": "SELECT * FROM normal_users WHERE id = ?",
+  "query": "SELECT\nid,\noauth_provider as `oauth_provider: OAuthProvider`,\noauth_id,\nnickname,\npicture,\nrefresh_token,\ncreated_at,\nupdated_at FROM normal_users WHERE oauth_provider = ? AND oauth_id = ?",
   "describe": {
     "columns": [
       {
@@ -15,7 +15,7 @@
       },
       {
         "ordinal": 1,
-        "name": "oauth_provider",
+        "name": "oauth_provider: OAuthProvider",
         "type_info": {
           "type": "VarString",
           "flags": "NOT_NULL | MULTIPLE_KEY | NO_DEFAULT_VALUE",
@@ -85,7 +85,7 @@
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 2
     },
     "nullable": [
       false,
@@ -98,5 +98,5 @@
       false
     ]
   },
-  "hash": "25495bf25d3c8e56514a62fd98269ad83378092ce34b0453fcd2cd0750a2bfb9"
+  "hash": "8af32bc3bc968bc5fd203cf7770e329e0b86ff1eb6b95540f3e7d642ff94cb88"
 }

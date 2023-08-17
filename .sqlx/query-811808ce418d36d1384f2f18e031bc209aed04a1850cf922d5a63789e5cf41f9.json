@@ -1,0 +1,36 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT * FROM mentoring_time WHERE hour = ?",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | PRIMARY_KEY | UNSIGNED | AUTO_INCREMENT",
+          "char_set": 63,
+          "max_size": 10
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "hour",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | UNIQUE_KEY | UNSIGNED | NO_DEFAULT_VALUE",
+          "char_set": 63,
+          "max_size": 10
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "811808ce418d36d1384f2f18e031bc209aed04a1850cf922d5a63789e5cf41f9"
+}

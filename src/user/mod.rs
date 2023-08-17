@@ -9,7 +9,6 @@ use serde::{Deserialize, Serialize};
 use crate::{error::BoxDynError, oauth::OAuthProvider};
 
 pub mod account;
-pub mod mentoring;
 pub mod picture;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
