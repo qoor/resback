@@ -20,7 +20,7 @@ aws-sdk-s3 = "0.29.0"
 aws-sdk-sesv2 = "0.29.0"
 axum = { version = "0.6.20", features = ["headers"] }
 axum-extra = { version = "0.7.7", features = ["cookie"] }
-axum_typed_multipart = "0.7.0"
+axum_typed_multipart = "0.8.0"
 chrono = { version = "0.4.26", features = ["serde"] }
 dotenvy = "0.15.7"
 hyper = { version = "0.14.27", features = ["full"] }
@@ -30,12 +30,12 @@ oauth2 = "4.4.1"
 rand = "0.8.5"
 reqwest = { version = "0.11.18", features = ["native-tls", "json"] }
 serde = { version = "1.0.183", features = ["derive"] }
-serde_json = "1.0.104"
+serde_json = "1.0.105"
 sqlx = { version = "0.7.1", features = ["runtime-tokio-native-tls", "mysql", "chrono"] }
 tempfile = "3.7.1"
-thiserror = "1.0.45"
+thiserror = "1.0.47"
 time = "0.3.25"
-tokio = { version = "1.31.0", features = ["full"] }
+tokio = { version = "1.32.0", features = ["full"] }
 tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 
