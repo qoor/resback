@@ -12,7 +12,6 @@ use sqlx::{
 use crate::{
     error::Error,
     mentoring::MentoringMethodKind,
-    nickname::{self, KoreanGenerator},
     oauth::OAuthProvider,
     schema::{
         JsonArray, NormalUserInfoSchema, SeniorRegisterSchema, SeniorSearchResultSchema,
@@ -22,7 +21,10 @@ use crate::{
     Result,
 };
 
-use super::OAuthUserData;
+use super::{
+    nickname::{self, KoreanGenerator},
+    OAuthUserData,
+};
 
 pub type UserId = u64;
 

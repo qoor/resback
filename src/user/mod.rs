@@ -11,6 +11,8 @@ use crate::{error::BoxDynError, oauth::OAuthProvider};
 pub mod account;
 pub mod picture;
 
+mod nickname;
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum UserType {
     NormalUser,

@@ -8,7 +8,6 @@ mod error;
 mod handler;
 mod jwt;
 mod mentoring;
-mod nickname;
 mod oauth;
 mod schema;
 mod user;
