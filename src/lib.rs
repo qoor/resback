@@ -111,10 +111,7 @@ pub async fn app(config: &Config, pool: &sqlx::Pool<MySql>) -> Router {
             "/mentoring/order",
             post(handler::mentoring::create_mentoring_order).route_layer(auth_layer.clone()),
         )
-        .route(
-            "/mentoring/order",
-            get(handler::mentoring::get_mentoring_order).route_layer(auth_layer.clone()),
-        );
+        .route("/mentoring/order/:id", get(handler::mentoring::get_mentoring_order));
 
     Router::new()
         .merge(root_routers)
