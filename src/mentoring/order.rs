@@ -1,12 +1,16 @@
 // Copyright 2023. The resback authors all rights reserved.
 
 use chrono::{DateTime, Utc};
+use serde::Serialize;
 use sqlx::MySql;
 
 use crate::{
-    schema::{MentoringOrderListSchema, MentoringOrderSchema},
-    user::account::UserId,
-    Result,
+    schema::{
+        MentoringBuyerOrderSchema, MentoringOrderListSchema, MentoringOrderSchema,
+        MentoringSellerOrderSchema,
+    },
+    user::account::{NormalUser, SeniorUser, User, UserId},
+    Error, Result,
 };
 
 use super::{
@@ -29,8 +33,8 @@ struct MentoringOrderRow {
 
 pub struct MentoringOrder {
     id: u64,
-    buyer_id: UserId,
-    seller_id: Option<UserId>,
+    buyer: NormalUser,
+    seller: Option<SeniorUser>,
     time: MentoringTime,
     method: MentoringMethod,
     price: u32,
@@ -130,19 +134,30 @@ content) VALUES (?, ?, ?, ?, ?, ?)",
         MentoringOrder::from_id(id, pool).await
     }
 
-    pub fn buyer_id(&self) -> UserId {
-        self.buyer_id
+    pub fn buyer(&self) -> &NormalUser {
+        &self.buyer
     }
 
-    pub fn seller_id(&self) -> Option<UserId> {
-        self.seller_id
+    pub fn seller(&self) -> &Option<SeniorUser> {
+        &self.seller
     }
 
     async fn from_row(row: &MentoringOrderRow, pool: &sqlx::Pool<MySql>) -> Result<Self> {
         Ok(Self {
             id: row.id,
-            buyer_id: row.buyer_id,
-            seller_id: row.seller_id,
+            buyer: { NormalUser::from_id(row.buyer_id, pool).await? },
+            seller: {
+                match row.seller_id {
+                    Some(seller_id) => match SeniorUser::from_id(seller_id, pool).await {
+                        Ok(seller) => Some(seller),
+                        Err(err) => match err {
+                            Error::UserNotFound { user_type: _, id: _ } => None,
+                            _ => Err(err)?,
+                        },
+                    },
+                    None => None,
+                }
+            },
             time: { MentoringTime::from_id(row.time_id, pool).await? },
             method: { MentoringMethod::from_kind(row.method_kind, pool).await? },
             price: row.price,
@@ -169,8 +184,8 @@ impl From<MentoringOrder> for MentoringOrderSchema {
     fn from(value: MentoringOrder) -> Self {
         Self {
             id: value.id,
-            buyer_id: value.buyer_id,
-            seller_id: value.seller_id,
+            buyer: value.buyer.into(),
+            seller: value.seller.map(|seller| seller.into()),
             time: value.time.hour(),
             method: value.method.kind(),
             price: value.price,
@@ -180,7 +195,37 @@ impl From<MentoringOrder> for MentoringOrderSchema {
     }
 }
 
-impl From<Vec<MentoringOrder>> for MentoringOrderListSchema {
+impl From<MentoringOrder> for MentoringBuyerOrderSchema {
+    fn from(value: MentoringOrder) -> Self {
+        Self {
+            id: value.id,
+            seller: value.seller.map(|seller| seller.into()),
+            time: value.time.hour(),
+            method: value.method.kind(),
+            price: value.price,
+            content: value.content,
+            created_at: value.created_at,
+        }
+    }
+}
+
+impl From<MentoringOrder> for MentoringSellerOrderSchema {
+    fn from(value: MentoringOrder) -> Self {
+        Self {
+            id: value.id,
+            buyer: value.buyer.into(),
+            time: value.time.hour(),
+            method: value.method.kind(),
+            price: value.price,
+            content: value.content,
+            created_at: value.created_at,
+        }
+    }
+}
+
+impl<T: Serialize + From<MentoringOrder>> From<Vec<MentoringOrder>>
+    for MentoringOrderListSchema<T>
+{
     fn from(value: Vec<MentoringOrder>) -> Self {
         Self { orders: { value.into_iter().map(|order| order.into()).collect() } }
     }

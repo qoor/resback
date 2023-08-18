@@ -175,9 +175,8 @@ pub struct MentoringOrderCreationSchema {
 #[derive(Debug, Serialize)]
 pub struct MentoringOrderSchema {
     pub id: u64,
-    pub buyer_id: UserId,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub seller_id: Option<UserId>,
+    pub buyer: NormalUserInfoSchema,
+    pub seller: Option<SeniorUserInfoSchema>,
     pub time: u32,
     pub method: MentoringMethodKind,
     pub price: u32,
@@ -186,12 +185,34 @@ pub struct MentoringOrderSchema {
 }
 
 #[derive(Debug, Serialize)]
-pub struct MentoringOrderListSchema {
-    pub orders: Vec<MentoringOrderSchema>,
+pub struct MentoringBuyerOrderSchema {
+    pub id: u64,
+    pub seller: Option<SeniorUserInfoSchema>,
+    pub time: u32,
+    pub method: MentoringMethodKind,
+    pub price: u32,
+    pub content: String,
+    pub created_at: DateTime<Utc>,
 }
 
-impl From<Vec<MentoringOrderSchema>> for MentoringOrderListSchema {
-    fn from(value: Vec<MentoringOrderSchema>) -> Self {
+#[derive(Debug, Serialize)]
+pub struct MentoringSellerOrderSchema {
+    pub id: u64,
+    pub buyer: NormalUserInfoSchema,
+    pub time: u32,
+    pub method: MentoringMethodKind,
+    pub price: u32,
+    pub content: String,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct MentoringOrderListSchema<T: Serialize> {
+    pub orders: Vec<T>,
+}
+
+impl<T: Serialize> From<Vec<T>> for MentoringOrderListSchema<T> {
+    fn from(value: Vec<T>) -> Self {
         Self { orders: value }
     }
 }

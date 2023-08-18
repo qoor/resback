@@ -16,10 +16,10 @@ use crate::{
     jwt,
     mentoring::{order::MentoringOrder, schedule::MentoringSchedule, MentoringMethodKind},
     schema::{
-        EmailVerificationSchema, MentoringOrderListSchema, NormalUserInfoSchema,
-        NormalUserUpdateSchema, SeniorRegisterSchema, SeniorSearchSchema, SeniorUserInfoSchema,
-        SeniorUserScheduleSchema, SeniorUserScheduleUpdateSchema, SeniorUserUpdateSchema,
-        UserIdentificationSchema,
+        EmailVerificationSchema, MentoringBuyerOrderSchema, MentoringOrderListSchema,
+        MentoringSellerOrderSchema, NormalUserInfoSchema, NormalUserUpdateSchema,
+        SeniorRegisterSchema, SeniorSearchSchema, SeniorUserInfoSchema, SeniorUserScheduleSchema,
+        SeniorUserScheduleUpdateSchema, SeniorUserUpdateSchema, UserIdentificationSchema,
     },
     user::{
         account::{
@@ -251,7 +251,7 @@ pub async fn get_senior_user_mentoring_orders(
 ) -> Result<impl IntoResponse> {
     validate_user_id(id, &user)?;
 
-    let orders: MentoringOrderListSchema =
+    let orders: MentoringOrderListSchema<MentoringSellerOrderSchema> =
         MentoringOrder::from_seller_id(user.id(), &data.database).await?.into();
 
     Ok(Json(orders))
@@ -264,7 +264,7 @@ pub async fn get_normal_user_mentoring_orders(
 ) -> Result<impl IntoResponse> {
     validate_user_id(id, &user)?;
 
-    let orders: MentoringOrderListSchema =
+    let orders: MentoringOrderListSchema<MentoringBuyerOrderSchema> =
         MentoringOrder::from_buyer_id(user.id(), &data.database).await?.into();
 
     Ok(Json(orders))

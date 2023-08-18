@@ -74,13 +74,16 @@ pub async fn get_mentoring_order(
     match user_type {
         UserType::NormalUser => {
             validate_user_id(
-                order.buyer_id(),
+                order.buyer().id(),
                 &NormalUser::from_id(user_id, &data.database).await?,
             )?;
         }
-        UserType::SeniorUser => match order.seller_id() {
-            Some(seller_id) => {
-                validate_user_id(seller_id, &SeniorUser::from_id(user_id, &data.database).await?)?;
+        UserType::SeniorUser => match order.seller() {
+            Some(seller) => {
+                validate_user_id(
+                    seller.id(),
+                    &SeniorUser::from_id(user_id, &data.database).await?,
+                )?;
             }
             None => Err(Error::Unauthorized)?,
         },
